@@ -1,0 +1,915 @@
+import 'package:flutter/material.dart';
+import 'dart:ui';
+import 'dart:math' as math;
+
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen>
+    with TickerProviderStateMixin {
+  bool isAutoMode = true;
+  int _selectedIndex = 0;
+  late AnimationController _pulseController;
+  late AnimationController _waveController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _waveController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _waveController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Gradient background
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF006064),
+                  Color(0xFF00838F),
+                  Color(0xFFF5F5F5),
+                ],
+                stops: [0.0, 0.3, 0.3],
+              ),
+            ),
+          ),
+
+          SafeArea(
+            child: Column(
+              children: [
+                _buildAppBar(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      children: [
+                        _buildStatusBanner(),
+                        const SizedBox(height: 20),
+                        _build3DSystemView(),
+                        const SizedBox(height: 24),
+                        _buildSensorGrid(),
+                        const SizedBox(height: 24),
+                        _buildQuickActions(),
+                        const SizedBox(height: 24),
+                        _buildRecentAlerts(),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _buildBlobNavigationBar(),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'AquaGrow',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Smart Hydroponic System',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              _buildGlassIconButton(
+                icon: Icons.notifications_outlined,
+                badge: '3',
+                onTap: () {},
+              ),
+              const SizedBox(width: 12),
+              _buildGlassIconButton(
+                icon: Icons.settings_outlined,
+                onTap: () {},
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassIconButton({
+    required IconData icon,
+    String? badge,
+    required VoidCallback onTap,
+  }) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Icon(icon, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (badge != null)
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Color(0xFFFF7043),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFFFF7043).withValues(alpha: 0.5),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+              child: Text(
+                badge,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStatusBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withValues(alpha: 0.3),
+                  Colors.white.withValues(alpha: 0.1),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, child) {
+                        return Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Color(0xFF7CB342),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0xFF7CB342).withValues(
+                                  alpha: _pulseController.value,
+                                ),
+                                blurRadius: 10 * _pulseController.value,
+                                spreadRadius: 3 * _pulseController.value,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'System Active',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Text(
+                      isAutoMode ? 'Auto' : 'Manual',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          isAutoMode = !isAutoMode;
+                        });
+                      },
+                      child: Container(
+                        width: 50,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          gradient: LinearGradient(
+                            colors: isAutoMode
+                                ? [Color(0xFF00BCD4), Color(0xFF7CB342)]
+                                : [Colors.grey, Colors.grey[700]!],
+                          ),
+                        ),
+                        child: AnimatedAlign(
+                          duration: Duration(milliseconds: 200),
+                          alignment: isAutoMode
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            margin: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _build3DSystemView() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        height: 200,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF006064).withValues(alpha: 0.3),
+              Color(0xFF00BCD4).withValues(alpha: 0.2),
+            ],
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Stack(
+              children: [
+                // Flow lines animation
+                AnimatedBuilder(
+                  animation: _waveController,
+                  builder: (context, child) {
+                    return CustomPaint(
+                      painter: FlowLinesPainter(
+                        animationValue: _waveController.value,
+                      ),
+                      size: Size.infinite,
+                    );
+                  },
+                ),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.water_drop,
+                        size: 60,
+                        color: Color(0xFF00BCD4),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '3D System View',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tap to rotate & explore',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSensorGrid() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Environmental Data',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 16),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 0.95,
+            children: [
+              _buildLiquidSensorCard(
+                icon: Icons.thermostat_outlined,
+                label: 'Temperature',
+                value: '26.5',
+                unit: '°C',
+                progress: 0.65,
+                color: Color(0xFFFF7043),
+              ),
+              _buildLiquidSensorCard(
+                icon: Icons.water_drop_outlined,
+                label: 'Water Level',
+                value: '85',
+                unit: '%',
+                progress: 0.85,
+                color: Color(0xFF00BCD4),
+              ),
+              _buildLiquidSensorCard(
+                icon: Icons.science_outlined,
+                label: 'pH Level',
+                value: '6.2',
+                unit: 'pH',
+                progress: 0.62,
+                color: Color(0xFF9C27B0),
+              ),
+              _buildLiquidSensorCard(
+                icon: Icons.light_mode_outlined,
+                label: 'Light',
+                value: '450',
+                unit: 'lux',
+                progress: 0.75,
+                color: Color(0xFFFFA726),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiquidSensorCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required String unit,
+    required double progress,
+    required Color color,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.2),
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            // Liquid fill background
+            AnimatedBuilder(
+              animation: _waveController,
+              builder: (context, child) {
+                return CustomPaint(
+                  painter: LiquidFillPainter(
+                    progress: progress,
+                    color: color,
+                    animationValue: _waveController.value,
+                  ),
+                  size: Size.infinite,
+                );
+              },
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child: Icon(icon, color: color, size: 28),
+                  ),
+                  const Spacer(),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        value,
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          unit,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quick Control',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildBlobActionButton(
+                icon: Icons.water_drop,
+                label: 'Pump',
+                isActive: true,
+                color: Color(0xFF00BCD4),
+              ),
+              _buildBlobActionButton(
+                icon: Icons.lightbulb_outline,
+                label: 'Lights',
+                isActive: true,
+                color: Color(0xFFFFA726),
+              ),
+              _buildBlobActionButton(
+                icon: Icons.air,
+                label: 'Fan',
+                isActive: false,
+                color: Colors.grey,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBlobActionButton({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required Color color,
+  }) {
+    return GestureDetector(
+      onTap: () {},
+      child: Column(
+        children: [
+          AnimatedContainer(
+            duration: Duration(milliseconds: 300),
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: isActive
+                  ? RadialGradient(
+                      colors: [
+                        color,
+                        color.withValues(alpha: 0.7),
+                      ],
+                    )
+                  : null,
+              color: isActive ? null : Colors.grey[300],
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.5),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Icon(
+              icon,
+              size: 36,
+              color: isActive ? Colors.white : Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isActive ? Colors.black87 : Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentAlerts() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Recent Alerts',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              TextButton(
+                onPressed: () {},
+                child: Text('View All'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildAlertBubble(
+            icon: Icons.warning_amber_rounded,
+            title: 'Temperature Rising',
+            subtitle: '28°C detected',
+            time: '2h ago',
+            color: Color(0xFFFFA726),
+          ),
+          const SizedBox(height: 12),
+          _buildAlertBubble(
+            icon: Icons.info_outline,
+            title: 'Pump Scheduled',
+            subtitle: 'Next cycle in 30 minutes',
+            time: '5h ago',
+            color: Color(0xFF00BCD4),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlertBubble({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String time,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            time,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBlobNavigationBar() {
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: Offset(0, -5),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildNavItem(Icons.dashboard, 'Home', 0),
+          _buildNavItem(Icons.sensors, 'Sensors', 1),
+          _buildNavItem(Icons.settings_remote, 'Control', 2),
+          _buildNavItem(Icons.analytics, 'Analytics', 3),
+          _buildNavItem(Icons.settings, 'Settings', 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final isSelected = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedIndex = index;
+        });
+      },
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Color(0xFF00BCD4).withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Color(0xFF00BCD4) : Colors.grey,
+              size: 26,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: isSelected ? Color(0xFF00BCD4) : Colors.grey,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Custom painter for flow lines
+class FlowLinesPainter extends CustomPainter {
+  final double animationValue;
+
+  FlowLinesPainter({required this.animationValue});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.cyan.withValues(alpha: 0.3)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    final waveHeight = 20.0;
+    final waveLength = size.width / 3;
+
+    path.moveTo(0, size.height / 2);
+
+    for (double x = 0; x <= size.width; x++) {
+      final y = size.height / 2 +
+          math.sin((x / waveLength) * 2 * math.pi + animationValue * 2 * math.pi) *
+              waveHeight;
+      path.lineTo(x, y);
+    }
+
+    canvas.drawPath(path, paint);
+
+    // Draw particles
+    final particlePaint = Paint()
+      ..color = Colors.cyan
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < 5; i++) {
+      final x = (size.width * ((i * 0.2 + animationValue) % 1));
+      final y = size.height / 2 +
+          math.sin((x / waveLength) * 2 * math.pi) * waveHeight;
+      canvas.drawCircle(Offset(x, y), 4, particlePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(FlowLinesPainter oldDelegate) => true;
+}
+
+// Custom painter for liquid fill
+class LiquidFillPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final double animationValue;
+
+  LiquidFillPainter({
+    required this.progress,
+    required this.color,
+    required this.animationValue,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.15)
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final waveHeight = 8.0;
+    final baseY = size.height * (1 - progress);
+
+    path.moveTo(0, size.height);
+    path.lineTo(0, baseY);
+
+    for (double x = 0; x <= size.width; x++) {
+      final y = baseY +
+          math.sin((x / size.width) * 4 * math.pi + animationValue * 2 * math.pi) *
+              waveHeight;
+      path.lineTo(x, y);
+    }
+
+    path.lineTo(size.width, size.height);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(LiquidFillPainter oldDelegate) => true;
+}
