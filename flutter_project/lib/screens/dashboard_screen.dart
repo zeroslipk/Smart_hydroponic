@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:math' as math;
+import 'sensor_monitoring_screen.dart';
+import 'control_panel_screen.dart';
+import 'analytics_screen.dart';
+import 'settings_screen.dart';
+import 'alerts_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -12,7 +17,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   bool isAutoMode = true;
-  int _selectedIndex = 0;
+  final int _selectedIndex = 0;
   late AnimationController _pulseController;
   late AnimationController _waveController;
 
@@ -37,6 +42,33 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.dispose();
   }
 
+  void _navigateToScreen(int index) {
+    if (index == 0) return; // Already on dashboard
+    
+    Widget screen;
+    switch (index) {
+      case 1:
+        screen = const SensorMonitoringScreen();
+        break;
+      case 2:
+        screen = const ControlPanelScreen();
+        break;
+      case 3:
+        screen = const AnalyticsScreen();
+        break;
+      case 4:
+        screen = const SettingsScreen();
+        break;
+      default:
+        return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => screen),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,7 +76,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           // Gradient background
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -96,7 +128,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
+          const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -121,12 +153,22 @@ class _DashboardScreenState extends State<DashboardScreen>
               _buildGlassIconButton(
                 icon: Icons.notifications_outlined,
                 badge: '3',
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AlertsScreen()),
+                  );
+                },
               ),
               const SizedBox(width: 12),
               _buildGlassIconButton(
                 icon: Icons.settings_outlined,
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  );
+                },
               ),
             ],
           ),
@@ -175,18 +217,18 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Color(0xFFFF7043),
+                color: const Color(0xFFFF7043),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFFFF7043).withValues(alpha: 0.5),
+                    color: const Color(0xFFFF7043).withValues(alpha: 0.5),
                     blurRadius: 8,
                   ),
                 ],
               ),
               child: Text(
                 badge,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
@@ -232,7 +274,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           width: 12,
                           height: 12,
                           decoration: BoxDecoration(
-                            color: Color(0xFF7CB342),
+                            color: const Color(0xFF7CB342),
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
@@ -248,7 +290,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       },
                     ),
                     const SizedBox(width: 12),
-                    Text(
+                    const Text(
                       'System Active',
                       style: TextStyle(
                         color: Colors.white,
@@ -262,7 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   children: [
                     Text(
                       isAutoMode ? 'Auto' : 'Manual',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
                       ),
@@ -281,12 +323,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                           borderRadius: BorderRadius.circular(14),
                           gradient: LinearGradient(
                             colors: isAutoMode
-                                ? [Color(0xFF00BCD4), Color(0xFF7CB342)]
+                                ? [const Color(0xFF00BCD4), const Color(0xFF7CB342)]
                                 : [Colors.grey, Colors.grey[700]!],
                           ),
                         ),
                         child: AnimatedAlign(
-                          duration: Duration(milliseconds: 200),
+                          duration: const Duration(milliseconds: 200),
                           alignment: isAutoMode
                               ? Alignment.centerRight
                               : Alignment.centerLeft,
@@ -294,7 +336,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             width: 24,
                             height: 24,
                             margin: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: Colors.white,
                               shape: BoxShape.circle,
                               boxShadow: [
@@ -329,8 +371,8 @@ class _DashboardScreenState extends State<DashboardScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF006064).withValues(alpha: 0.3),
-              Color(0xFF00BCD4).withValues(alpha: 0.2),
+              const Color(0xFF006064).withValues(alpha: 0.3),
+              const Color(0xFF00BCD4).withValues(alpha: 0.2),
             ],
           ),
         ),
@@ -352,7 +394,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     );
                   },
                 ),
-                Center(
+                const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -361,7 +403,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         size: 60,
                         color: Color(0xFF00BCD4),
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       Text(
                         '3D System View',
                         style: TextStyle(
@@ -370,7 +412,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         'Tap to rotate & explore',
                         style: TextStyle(
@@ -395,7 +437,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Environmental Data',
             style: TextStyle(
               fontSize: 20,
@@ -418,7 +460,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 value: '26.5',
                 unit: '°C',
                 progress: 0.65,
-                color: Color(0xFFFF7043),
+                color: const Color(0xFFFF7043),
               ),
               _buildLiquidSensorCard(
                 icon: Icons.water_drop_outlined,
@@ -426,7 +468,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 value: '85',
                 unit: '%',
                 progress: 0.85,
-                color: Color(0xFF00BCD4),
+                color: const Color(0xFF00BCD4),
               ),
               _buildLiquidSensorCard(
                 icon: Icons.science_outlined,
@@ -434,7 +476,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 value: '6.2',
                 unit: 'pH',
                 progress: 0.62,
-                color: Color(0xFF9C27B0),
+                color: const Color(0xFF9C27B0),
               ),
               _buildLiquidSensorCard(
                 icon: Icons.light_mode_outlined,
@@ -442,7 +484,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 value: '450',
                 unit: 'lux',
                 progress: 0.75,
-                color: Color(0xFFFFA726),
+                color: const Color(0xFFFFA726),
               ),
             ],
           ),
@@ -467,7 +509,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           BoxShadow(
             color: color.withValues(alpha: 0.2),
             blurRadius: 20,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -512,7 +554,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   const Spacer(),
                   Text(
                     label,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       color: Colors.black54,
                       fontWeight: FontWeight.w500,
@@ -524,7 +566,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     children: [
                       Text(
                         value,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
@@ -535,7 +577,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         padding: const EdgeInsets.only(bottom: 6),
                         child: Text(
                           unit,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 16,
                             color: Colors.black54,
                           ),
@@ -558,7 +600,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Quick Control',
             style: TextStyle(
               fontSize: 20,
@@ -574,13 +616,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                 icon: Icons.water_drop,
                 label: 'Pump',
                 isActive: true,
-                color: Color(0xFF00BCD4),
+                color: const Color(0xFF00BCD4),
               ),
               _buildBlobActionButton(
                 icon: Icons.lightbulb_outline,
                 label: 'Lights',
                 isActive: true,
-                color: Color(0xFFFFA726),
+                color: const Color(0xFFFFA726),
               ),
               _buildBlobActionButton(
                 icon: Icons.air,
@@ -606,7 +648,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         children: [
           AnimatedContainer(
-            duration: Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 300),
             width: 80,
             height: 80,
             decoration: BoxDecoration(
@@ -659,7 +701,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'Recent Alerts',
                 style: TextStyle(
                   fontSize: 20,
@@ -668,8 +710,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ),
               TextButton(
-                onPressed: () {},
-                child: Text('View All'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AlertsScreen()),
+                  );
+                },
+                child: const Text('View All'),
               ),
             ],
           ),
@@ -679,7 +726,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             title: 'Temperature Rising',
             subtitle: '28°C detected',
             time: '2h ago',
-            color: Color(0xFFFFA726),
+            color: const Color(0xFFFFA726),
           ),
           const SizedBox(height: 12),
           _buildAlertBubble(
@@ -687,7 +734,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             title: 'Pump Scheduled',
             subtitle: 'Next cycle in 30 minutes',
             time: '5h ago',
-            color: Color(0xFF00BCD4),
+            color: const Color(0xFF00BCD4),
           ),
         ],
       ),
@@ -710,7 +757,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -731,7 +778,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
@@ -740,7 +787,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
                     color: Colors.black54,
                   ),
@@ -750,7 +797,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
           Text(
             time,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               color: Colors.grey,
             ),
@@ -769,7 +816,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
-            offset: Offset(0, -5),
+            offset: const Offset(0, -5),
           ),
         ],
       ),
@@ -790,16 +837,16 @@ class _DashboardScreenState extends State<DashboardScreen>
     final isSelected = _selectedIndex == index;
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
+        if (index != _selectedIndex) {
+          _navigateToScreen(index);
+        }
       },
       child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? Color(0xFF00BCD4).withValues(alpha: 0.1)
+              ? const Color(0xFF00BCD4).withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
@@ -808,7 +855,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           children: [
             Icon(
               icon,
-              color: isSelected ? Color(0xFF00BCD4) : Colors.grey,
+              color: isSelected ? const Color(0xFF00BCD4) : Colors.grey,
               size: 26,
             ),
             const SizedBox(height: 4),
@@ -816,7 +863,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               label,
               style: TextStyle(
                 fontSize: 11,
-                color: isSelected ? Color(0xFF00BCD4) : Colors.grey,
+                color: isSelected ? const Color(0xFF00BCD4) : Colors.grey,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
