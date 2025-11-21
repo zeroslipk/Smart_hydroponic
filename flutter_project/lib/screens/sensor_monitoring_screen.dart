@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:math' as math;
+import 'package:liquid_progress_indicator_v2/liquid_progress_indicator.dart';
 
 class SensorMonitoringScreen extends StatefulWidget {
-  const SensorMonitoringScreen({Key? key}) : super(key: key);
+  const SensorMonitoringScreen({super.key});
 
   @override
   State<SensorMonitoringScreen> createState() => _SensorMonitoringScreenState();
@@ -431,14 +432,14 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                 SizedBox(
                   width: 100,
                   height: 100,
-                  child: _LiquidCircularProgressIndicator(
+                  child: LiquidCircularProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
-                    valueColor: sensor.color,
+                    valueColor: AlwaysStoppedAnimation(sensor.color),
                     backgroundColor: Colors.grey[200]!,
                     borderColor: sensor.color,
                     borderWidth: 3.0,
-                    animationValue: _waveController.value,
-                    child: Text(
+                    direction: Axis.vertical,
+                    center: Text(
                       '${(progress * 100).toInt()}%',
                       style: TextStyle(
                         fontSize: 20,
@@ -650,119 +651,4 @@ class MiniChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(MiniChartPainter oldDelegate) => true;
-}
-
-class _LiquidCircularProgressIndicator extends StatelessWidget {
-  final double value;
-  final Color valueColor;
-  final Color backgroundColor;
-  final Color borderColor;
-  final double borderWidth;
-  final double animationValue;
-  final Widget? child;
-
-  const _LiquidCircularProgressIndicator({
-    required this.value,
-    required this.valueColor,
-    required this.backgroundColor,
-    required this.borderColor,
-    required this.borderWidth,
-    required this.animationValue,
-    this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _LiquidCircularPainter(
-        value: value,
-        valueColor: valueColor,
-        backgroundColor: backgroundColor,
-        borderColor: borderColor,
-        borderWidth: borderWidth,
-        animationValue: animationValue,
-      ),
-      child: child != null
-          ? Center(child: child)
-          : null,
-    );
-  }
-}
-
-class _LiquidCircularPainter extends CustomPainter {
-  final double value;
-  final Color valueColor;
-  final Color backgroundColor;
-  final Color borderColor;
-  final double borderWidth;
-  final double animationValue;
-
-  _LiquidCircularPainter({
-    required this.value,
-    required this.valueColor,
-    required this.backgroundColor,
-    required this.borderColor,
-    required this.borderWidth,
-    required this.animationValue,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width / 2) - borderWidth;
-
-    // Draw background circle
-    final backgroundPaint = Paint()
-      ..color = backgroundColor
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius, backgroundPaint);
-
-    // Draw liquid fill with wave effect
-    if (value > 0) {
-      final fillPaint = Paint()
-        ..color = valueColor
-        ..style = PaintingStyle.fill;
-
-      final path = Path();
-      final fillHeight = size.height * (1 - value);
-      final waveHeight = 4.0;
-      final waveLength = size.width / 2;
-
-      // Start from bottom
-      path.moveTo(0, size.height);
-      path.lineTo(0, fillHeight);
-
-      // Draw wave
-      for (double x = 0; x <= size.width; x++) {
-        final y = fillHeight +
-            math.sin((x / waveLength) * 2 * math.pi + animationValue * 2 * math.pi) *
-                waveHeight;
-        path.lineTo(x, y);
-      }
-
-      path.lineTo(size.width, size.height);
-      path.close();
-
-      // Clip to circle
-      canvas.save();
-      final clipPath = Path()
-        ..addOval(Rect.fromCircle(center: center, radius: radius));
-      canvas.clipPath(clipPath);
-      canvas.drawPath(path, fillPaint);
-      canvas.restore();
-    }
-
-    // Draw border
-    final borderPaint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = borderWidth;
-    canvas.drawCircle(center, radius, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(_LiquidCircularPainter oldDelegate) =>
-      oldDelegate.value != value ||
-      oldDelegate.animationValue != animationValue ||
-      oldDelegate.valueColor != valueColor;
 }
