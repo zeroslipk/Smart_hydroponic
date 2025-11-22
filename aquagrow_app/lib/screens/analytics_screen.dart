@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:provider/provider.dart';
+import '../providers/sensor_provider.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -19,6 +21,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   final List<String> periods = ['24 Hours', '7 Days', '30 Days', 'Custom'];
 
+  // Store historical data for calculations
+  Map<String, List<double>> sensorHistory = {
+    'temperature': [],
+    'waterLevel': [],
+    'pH': [],
+    'tds': [],
+    'light': [],
+  };
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +42,70 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat(reverse: true);
+
+    // Start collecting historical data
+    _startDataCollection();
+  }
+
+  void _startDataCollection() {
+    // Collect data every 2 seconds for realistic stats
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return false;
+
+      final provider = context.read<SensorProvider>();
+      
+      // Add current values to history
+      if (provider.temperature != null) {
+        sensorHistory['temperature']!.add(provider.temperature!.value);
+        if (sensorHistory['temperature']!.length > 100) {
+          sensorHistory['temperature']!.removeAt(0);
+        }
+      }
+      
+      if (provider.waterLevel != null) {
+        sensorHistory['waterLevel']!.add(provider.waterLevel!.value);
+        if (sensorHistory['waterLevel']!.length > 100) {
+          sensorHistory['waterLevel']!.removeAt(0);
+        }
+      }
+      
+      if (provider.pH != null) {
+        sensorHistory['pH']!.add(provider.pH!.value);
+        if (sensorHistory['pH']!.length > 100) {
+          sensorHistory['pH']!.removeAt(0);
+        }
+      }
+      
+      if (provider.tds != null) {
+        sensorHistory['tds']!.add(provider.tds!.value);
+        if (sensorHistory['tds']!.length > 100) {
+          sensorHistory['tds']!.removeAt(0);
+        }
+      }
+      
+      if (provider.light != null) {
+        sensorHistory['light']!.add(provider.light!.value);
+        if (sensorHistory['light']!.length > 100) {
+          sensorHistory['light']!.removeAt(0);
+        }
+      }
+
+      return true;
+    });
+  }
+
+  Map<String, double> _getStats(String sensorId) {
+    final history = sensorHistory[sensorId] ?? [];
+    if (history.isEmpty) {
+      return {'min': 0, 'max': 0, 'avg': 0};
+    }
+
+    final min = history.reduce((a, b) => a < b ? a : b);
+    final max = history.reduce((a, b) => a > b ? a : b);
+    final avg = history.reduce((a, b) => a + b) / history.length;
+
+    return {'min': min, 'max': max, 'avg': avg};
   }
 
   @override
@@ -60,23 +135,69 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             children: [
               _buildAppBar(),
               Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildPeriodSelector(),
-                      const SizedBox(height: 24),
-                      _buildHealthScore(),
-                      const SizedBox(height: 24),
-                      _buildParameterTrends(),
-                      const SizedBox(height: 24),
-                      _buildStatisticsSummary(),
-                      const SizedBox(height: 24),
-                      _buildExportOptions(),
-                      const SizedBox(height: 80),
-                    ],
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    await context.read<SensorProvider>().refresh();
+                  },
+                  color: const Color(0xFF00BCD4),
+                  child: Consumer<SensorProvider>(
+                    builder: (context, provider, child) {
+                      if (provider.isLoading) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF00BCD4),
+                          ),
+                        );
+                      }
+
+                      if (provider.error != null) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 64,
+                                color: Colors.white70,
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Error loading analytics',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () => provider.refresh(),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildPeriodSelector(),
+                            const SizedBox(height: 24),
+                            _buildHealthScore(provider),
+                            const SizedBox(height: 24),
+                            _buildParameterTrends(provider),
+                            const SizedBox(height: 24),
+                            _buildStatisticsSummary(provider),
+                            const SizedBox(height: 24),
+                            _buildExportOptions(),
+                            const SizedBox(height: 80),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -97,11 +218,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             onTap: () => Navigator.pop(context),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Analytics',
                   style: TextStyle(
                     color: Colors.white,
@@ -109,19 +230,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  'Historical data & insights',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
+                Consumer<SensorProvider>(
+                  builder: (context, provider, child) {
+                    return Text(
+                      'Historical data • ${provider.timeSinceUpdate}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
           ),
           _buildGlassIconButton(
-            icon: Icons.filter_list,
-            onTap: () {},
+            icon: Icons.refresh,
+            onTap: () {
+              context.read<SensorProvider>().refresh();
+            },
           ),
         ],
       ),
@@ -221,7 +348,41 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
   }
 
-  Widget _buildHealthScore() {
+  Widget _buildHealthScore(provider) {
+    final sensors = provider.getAllSensors();
+    if (sensors.isEmpty) {
+      return const SizedBox();
+    }
+
+    int optimalCount = 0;
+    int goodCount = 0;
+    final int totalCount = sensors.length;
+
+    for (var sensor in sensors) {
+      if (sensor.status == 'optimal') {
+        optimalCount++;
+      }
+      if (sensor.status == 'good') {
+        goodCount++;
+      }
+    }
+
+    final int healthScore = totalCount > 0 
+        ? ((optimalCount * 100 + goodCount * 80) / totalCount).round()
+        : 0;
+    final double healthProgress = healthScore / 100;
+
+    String healthStatus = 'Good';
+    if (healthScore >= 90) {
+      healthStatus = 'Excellent';
+    } else if (healthScore >= 80) {
+      healthStatus = 'Very Good';
+    } else if (healthScore < 70) {
+      healthStatus = 'Fair';
+    } else if (healthScore < 50) {
+      healthStatus = 'Poor';
+    }
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -249,13 +410,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           Stack(
             alignment: Alignment.center,
             children: [
-              // Animated wave circle
               AnimatedBuilder(
                 animation: _waveController,
                 builder: (context, child) {
                   return CustomPaint(
                     painter: WaveCirclePainter(
-                      progress: 0.87,
+                      progress: healthProgress,
                       animationValue: _waveController.value,
                       color: const Color(0xFF7CB342),
                     ),
@@ -263,20 +423,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                   );
                 },
               ),
-              // Score text
-              const Column(
+              Column(
                 children: [
                   Text(
-                    '87',
-                    style: TextStyle(
+                    healthScore.toString(),
+                    style: const TextStyle(
                       fontSize: 60,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF7CB342),
                     ),
                   ),
                   Text(
-                    'Excellent',
-                    style: TextStyle(
+                    healthStatus,
+                    style: const TextStyle(
                       fontSize: 16,
                       color: Colors.black54,
                       fontWeight: FontWeight.w600,
@@ -290,10 +449,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildScoreIndicator('Temperature', 0.95, const Color(0xFFFF5252)),
-              _buildScoreIndicator('Water', 0.85, const Color(0xFF00BCD4)),
-              _buildScoreIndicator('pH', 0.90, const Color(0xFF9C27B0)),
-              _buildScoreIndicator('Nutrients', 0.78, const Color(0xFFFF9800)),
+              for (var sensor in sensors.take(4))
+                _buildScoreIndicator(
+                  sensor.displayName.split(' ')[0],
+                  sensor.progress,
+                  sensor.sensorColor,
+                ),
             ],
           ),
         ],
@@ -307,7 +468,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         CircularPercentIndicator(
           radius: 30,
           lineWidth: 6,
-          percent: value,
+          percent: value.clamp(0.0, 1.0),
           center: Text(
             '${(value * 100).toInt()}',
             style: TextStyle(
@@ -327,12 +488,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             fontSize: 11,
             color: Colors.black54,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
   }
 
-  Widget _buildParameterTrends() {
+  Widget _buildParameterTrends(provider) {
+    final temperature = provider.temperature;
+    final pH = provider.pH;
+    final waterLevel = provider.waterLevel;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -345,23 +511,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           ),
         ),
         const SizedBox(height: 16),
-        _buildTrendChart(
-          title: 'Temperature Over Time',
-          color: const Color(0xFFFF5252),
-          unit: '°C',
-        ),
+        if (temperature != null)
+          _buildTrendChart(
+            title: 'Temperature Over Time',
+            color: const Color(0xFFFF5252),
+            unit: '°C',
+            sensorId: 'temperature',
+            currentValue: temperature.value,
+          ),
         const SizedBox(height: 16),
-        _buildTrendChart(
-          title: 'pH Level Over Time',
-          color: const Color(0xFF9C27B0),
-          unit: 'pH',
-        ),
+        if (pH != null)
+          _buildTrendChart(
+            title: 'pH Level Over Time',
+            color: const Color(0xFF9C27B0),
+            unit: 'pH',
+            sensorId: 'pH',
+            currentValue: pH.value,
+          ),
         const SizedBox(height: 16),
-        _buildTrendChart(
-          title: 'Water Level Over Time',
-          color: const Color(0xFF00BCD4),
-          unit: '%',
-        ),
+        if (waterLevel != null)
+          _buildTrendChart(
+            title: 'Water Level Over Time',
+            color: const Color(0xFF00BCD4),
+            unit: '%',
+            sensorId: 'waterLevel',
+            currentValue: waterLevel.value,
+          ),
       ],
     );
   }
@@ -370,7 +545,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     required String title,
     required Color color,
     required String unit,
+    required String sensorId,
+    required double currentValue,
   }) {
+    final spots = _generateSpotsFromValue(currentValue, sensorId);
+    
+    // Calculate dynamic min/max from actual chart data
+    final values = spots.map((s) => s.y).toList();
+    final chartMin = values.reduce((a, b) => a < b ? a : b);
+    final chartMax = values.reduce((a, b) => a > b ? a : b);
+    final padding = (chartMax - chartMin) * 0.1; // 10% padding
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -403,7 +588,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  horizontalInterval: 5,
                   getDrawingHorizontalLine: (value) {
                     return FlLine(
                       color: Colors.grey[200]!,
@@ -413,13 +597,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 ),
                 titlesData: FlTitlesData(
                   show: true,
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false)
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false)
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 30,
-                      interval: 1,
+                      interval: 3,
                       getTitlesWidget: (value, meta) {
                         const style = TextStyle(
                           color: Colors.grey,
@@ -453,11 +641,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: 10,
                       reservedSize: 42,
                       getTitlesWidget: (value, meta) {
                         return Text(
-                          '${value.toInt()}',
+                          value.toStringAsFixed(0),
                           style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 10,
@@ -470,11 +657,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 borderData: FlBorderData(show: false),
                 minX: 0,
                 maxX: 12,
-                minY: 0,
-                maxY: 50,
+                minY: chartMin - padding,
+                maxY: chartMax + padding,
                 lineBarsData: [
                   LineChartBarData(
-                    spots: _generateSpots(),
+                    spots: spots,
                     isCurved: true,
                     gradient: LinearGradient(
                       colors: [color, color.withValues(alpha: 0.5)],
@@ -498,62 +685,40 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildChartStat('Min', '22°C', color),
-              _buildChartStat('Avg', '25°C', color),
-              _buildChartStat('Max', '28°C', color),
-            ],
-          ),
         ],
       ),
     );
   }
 
-  List<FlSpot> _generateSpots() {
-    return const [
-      FlSpot(0, 24),
-      FlSpot(1, 25),
-      FlSpot(2, 23),
-      FlSpot(3, 26),
-      FlSpot(4, 27),
-      FlSpot(5, 26),
-      FlSpot(6, 28),
-      FlSpot(7, 27),
-      FlSpot(8, 26),
-      FlSpot(9, 25),
-      FlSpot(10, 24),
-      FlSpot(11, 25),
-      FlSpot(12, 26),
-    ];
-  }
-
-  Widget _buildChartStat(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
+  List<FlSpot> _generateSpotsFromValue(double currentValue, String sensorId) {
+    final history = sensorHistory[sensorId] ?? [];
+    
+    if (history.length < 13) {
+      // Generate simulated data if not enough history
+      final random = math.Random(currentValue.toInt());
+      final variance = currentValue * 0.15;
+      
+      List<FlSpot> spots = [];
+      for (int i = 0; i <= 12; i++) {
+        final variation = (random.nextDouble() - 0.5) * variance;
+        final value = currentValue + variation;
+        spots.add(FlSpot(i.toDouble(), value));
+      }
+      return spots;
+    }
+    
+    // Use actual historical data (last 13 points)
+    final recentHistory = history.sublist(history.length - 13);
+    return List.generate(
+      recentHistory.length,
+      (i) => FlSpot(i.toDouble(), recentHistory[i]),
     );
   }
 
-  Widget _buildStatisticsSummary() {
+  Widget _buildStatisticsSummary(provider) {
+    final sensors = provider.getAllSensors();
+    if (sensors.isEmpty) return const SizedBox();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -584,15 +749,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             ),
             children: [
               _buildTableRow('Parameter', 'Min', 'Max', 'Avg', isHeader: true),
-              _buildTableRow('Temperature', '22°C', '28°C', '25°C'),
-              _buildTableRow('pH Level', '5.8', '6.8', '6.3'),
-              _buildTableRow('Water Level', '45%', '100%', '78%'),
-              _buildTableRow('TDS/EC', '800', '1500', '1150'),
-              _buildTableRow('Light', '200lux', '800lux', '520lux'),
+              for (var sensor in sensors)
+                _buildTableRowWithStats(sensor),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  TableRow _buildTableRowWithStats(dynamic sensor) {
+    final stats = _getStats(sensor.id);
+    final isDecimal = sensor.id == 'pH' || sensor.id == 'temperature';
+
+    return _buildTableRow(
+      sensor.displayName,
+      '${stats['min']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}',
+      '${stats['max']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}',
+      '${stats['avg']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}',
     );
   }
 
@@ -681,7 +855,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {},
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('$label feature coming soon!'),
+                backgroundColor: color,
+              ),
+            );
+          },
           borderRadius: BorderRadius.circular(16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -720,14 +901,12 @@ class WaveCirclePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // Draw outer circle
     final outerPaint = Paint()
       ..color = color.withValues(alpha: 0.1)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 8;
     canvas.drawCircle(center, radius, outerPaint);
 
-    // Draw filled wave
     final fillPaint = Paint()
       ..color = color.withValues(alpha: 0.2)
       ..style = PaintingStyle.fill;
