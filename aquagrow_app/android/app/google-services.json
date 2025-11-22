@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "85011720124",
+    "firebase_url": "https://smart-hydroponic-8529f-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "smart-hydroponic-8529f",
+    "storage_bucket": "smart-hydroponic-8529f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:85011720124:android:a7d5dc1bbf70fc9be46db9",
+        "android_client_info": {
+          "package_name": "com.example.aquagrow_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg_D3UX7XhSHYNd-Buas5TVRmhErmId9I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:85011720124:android:552b2e9f146c565de46db9",
+        "android_client_info": {
+          "package_name": "com.example.flutter_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg_D3UX7XhSHYNd-Buas5TVRmhErmId9I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
