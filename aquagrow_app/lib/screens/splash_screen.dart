@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'dashboard_screen.dart';
 import 'auth_screen.dart';
+import '../services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,13 +18,13 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _bubbleController;
   late AnimationController _growthController;
   late Animation<double> _growAnimation;
-  
+
   List<Bubble> bubbles = [];
 
   @override
   void initState() {
     super.initState();
-    
+
     // Wave animation controller
     _waveController = AnimationController(
       duration: const Duration(seconds: 3),
@@ -48,16 +50,20 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Start animations
     _growthController.forward();
-    
+
     // Generate random bubbles
     _generateBubbles();
 
     // Navigate to next screen after delay
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) {
+        final user = AuthService().currentUser;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const AuthScreen()),
+          MaterialPageRoute(
+            builder: (context) =>
+                user != null ? const DashboardScreen() : const AuthScreen(),
+          ),
         );
       }
     });
@@ -65,12 +71,14 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _generateBubbles() {
     for (int i = 0; i < 20; i++) {
-      bubbles.add(Bubble(
-        x: math.Random().nextDouble(),
-        y: math.Random().nextDouble(),
-        size: math.Random().nextDouble() * 30 + 10,
-        speed: math.Random().nextDouble() * 2 + 1,
-      ));
+      bubbles.add(
+        Bubble(
+          x: math.Random().nextDouble(),
+          y: math.Random().nextDouble(),
+          size: math.Random().nextDouble() * 30 + 10,
+          speed: math.Random().nextDouble() * 2 + 1,
+        ),
+      );
     }
   }
 
@@ -149,9 +157,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ],
                       ),
                     ),
-                    child: Center(
-                      child: _buildPlantIcon(),
-                    ),
+                    child: Center(child: _buildPlantIcon()),
                   ),
                 ),
 
@@ -171,11 +177,7 @@ class _SplashScreenState extends State<SplashScreen>
                             Color(0xFF00BCD4),
                             Colors.white,
                           ],
-                          stops: [
-                            0.0,
-                            _waveController.value,
-                            1.0,
-                          ],
+                          stops: [0.0, _waveController.value, 1.0],
                         ).createShader(bounds);
                       },
                       child: const Text(
@@ -230,8 +232,9 @@ class _SplashScreenState extends State<SplashScreen>
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white
-                                    .withValues(alpha: 1 - _waveController.value),
+                                color: Colors.white.withValues(
+                                  alpha: 1 - _waveController.value,
+                                ),
                                 width: 2,
                               ),
                             ),
@@ -299,11 +302,7 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ),
         // Plant inside droplet
-        Icon(
-          Icons.eco,
-          size: 50,
-          color: Color(0xFF7CB342),
-        ),
+        Icon(Icons.eco, size: 50, color: Color(0xFF7CB342)),
       ],
     );
   }
@@ -345,10 +344,7 @@ class BubblePainter extends CustomPainter {
         bubble.x = math.Random().nextDouble();
       }
 
-      final center = Offset(
-        bubble.x * size.width,
-        bubble.y * size.height,
-      );
+      final center = Offset(bubble.x * size.width, bubble.y * size.height);
 
       // Draw bubble with gradient
       final gradient = RadialGradient(

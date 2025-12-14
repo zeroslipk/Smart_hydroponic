@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:ui';
 import 'dart:math' as math;
+import '../services/auth_service.dart';
 import 'dashboard_screen.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -10,13 +12,12 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen>
-    with TickerProviderStateMixin {
+class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   bool isLogin = true;
   bool obscurePassword = true;
   late AnimationController _waveController;
   late AnimationController _rippleController;
-  
+
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
@@ -24,7 +25,7 @@ class _AuthScreenState extends State<AuthScreen>
   @override
   void initState() {
     super.initState();
-    
+
     _waveController = AnimationController(
       duration: const Duration(seconds: 4),
       vsync: this,
@@ -36,6 +37,8 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
+  bool isLoading = false; // Add loading state
+
   @override
   void dispose() {
     _waveController.dispose();
@@ -44,6 +47,66 @@ class _AuthScreenState extends State<AuthScreen>
     passwordController.dispose();
     nameController.dispose();
     super.dispose();
+  }
+
+  // Auth logic
+  Future<void> _handleAuth() async {
+    if (emailController.text.trim().isEmpty ||
+        passwordController.text.trim().isEmpty ||
+        (!isLogin && nameController.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all fields')),
+      );
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      if (isLogin) {
+        await AuthService().signIn(
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
+        );
+      } else {
+        await AuthService().signUp(
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
+          name: nameController.text.trim(),
+        );
+      }
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        String message = e.message ?? 'Authentication failed';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('An error occurred: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -67,7 +130,13 @@ class _AuthScreenState extends State<AuthScreen>
             },
           ),
 
-          // Main// ... continuing from where we left off in auth_screen.dart
+          if (isLoading)
+            Container(
+              color: Colors.black.withValues(alpha: 0.5),
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.cyan),
+              ),
+            ),
 
           // Main content with glassmorphism
           SafeArea(
@@ -212,15 +281,7 @@ class _AuthScreenState extends State<AuthScreen>
 
                   // Liquid button
                   _buildLiquidButton(
-                    onPressed: () {
-                      // Navigate to dashboard
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const DashboardScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: _handleAuth,
                     text: isLogin ? 'Sign In' : 'Create Account',
                   ),
 
@@ -355,11 +416,7 @@ class _AuthScreenState extends State<AuthScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF006064),
-                Color(0xFF00838F),
-                Color(0xFF00ACC1),
-              ],
+              colors: [Color(0xFF006064), Color(0xFF00838F), Color(0xFF00ACC1)],
               stops: [
                 0.0,
                 0.5 + (math.sin(_waveController.value * 2 * math.pi) * 0.2),
@@ -461,11 +518,7 @@ class _AuthScreenState extends State<AuthScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF00BCD4),
-                Color(0xFF00838F),
-                Color(0xFF006064),
-              ],
+              colors: [Color(0xFF00BCD4), Color(0xFF00838F), Color(0xFF006064)],
               stops: [
                 0.0,
                 0.5 + (math.sin(_waveController.value * 2 * math.pi) * 0.3),
@@ -518,8 +571,7 @@ class FloatingBubblesPainter extends CustomPainter {
     // Draw 5 floating bubbles
     for (int i = 0; i < 5; i++) {
       final x = size.width * (0.1 + i * 0.2);
-      final y = size.height *
-          ((0.2 + i * 0.15 + animationValue) % 1.2);
+      final y = size.height * ((0.2 + i * 0.15 + animationValue) % 1.2);
       final radius = 20.0 + (i * 5);
 
       canvas.drawCircle(Offset(x, y), radius, paint);
@@ -529,4 +581,3 @@ class FloatingBubblesPainter extends CustomPainter {
   @override
   bool shouldRepaint(FloatingBubblesPainter oldDelegate) => true;
 }
-

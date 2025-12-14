@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import '../services/auth_service.dart';
+import 'auth_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -30,10 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF006064),
-              Color(0xFFF5F5F5),
-            ],
+            colors: [Color(0xFF006064), Color(0xFFF5F5F5)],
             stops: [0.0, 0.25],
           ),
         ),
@@ -59,6 +58,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 24),
                     _buildSectionTitle('About'),
                     _buildAboutSection(),
+                    const SizedBox(height: 24),
+                    _buildLogoutSection(),
+                    _buildDeleteAccountSection(),
                     const SizedBox(height: 80),
                   ],
                 ),
@@ -94,10 +96,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 Text(
                   'Customize your experience',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
             ),
@@ -154,6 +153,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildUserProfile() {
+    final user = AuthService().currentUser;
+    final name = user?.displayName ?? 'User';
+    final email = user?.email ?? 'No email';
+    final initials = name.isNotEmpty ? name.substring(0, 2).toUpperCase() : 'U';
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -180,10 +184,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     colors: [Color(0xFF00BCD4), Color(0xFF7CB342)],
                   ),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'MH',
-                    style: TextStyle(
+                    initials,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -207,27 +211,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          const Text(
-            'mazen saeed ',
-            style: TextStyle(
+          Text(
+            name,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'el3alamy@email.com',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-            ),
+          Text(
+            email,
+            style: const TextStyle(fontSize: 14, color: Colors.black54),
           ),
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: _buildProfileButton('Edit Profile', Icons.person_outline),
+                child: _buildProfileButton(
+                  'Edit Profile',
+                  Icons.person_outline,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -244,7 +248,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFF00BCD4).withValues(alpha: 0.3), width: 2),
+        border: Border.all(
+          color: const Color(0xFF00BCD4).withValues(alpha: 0.3),
+          width: 2,
+        ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Material(
@@ -433,10 +440,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               // Safe zone highlight
               Positioned(
-                left: ((minValue - rangeMin) / (rangeMax - rangeMin)) *
+                left:
+                    ((minValue - rangeMin) / (rangeMax - rangeMin)) *
                     MediaQuery.of(context).size.width *
                     0.7,
-                width: ((maxValue - minValue) / (rangeMax - rangeMin)) *
+                width:
+                    ((maxValue - minValue) / (rangeMax - rangeMin)) *
                     MediaQuery.of(context).size.width *
                     0.7,
                 child: Container(
@@ -693,10 +702,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           Text(
             trailing,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-            ),
+            style: const TextStyle(fontSize: 14, color: Colors.black54),
           ),
           const SizedBox(width: 8),
           const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
@@ -739,6 +745,139 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               Icon(Icons.chevron_right, color: color, size: 20),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            await AuthService().signOut();
+            if (mounted) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const AuthScreen()),
+                (route) => false,
+              );
+            }
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.logout, color: Color(0xFFFF5252)),
+                const SizedBox(width: 12),
+                const Text(
+                  'Log Out',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFFF5252),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeleteAccountSection() {
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Delete Account'),
+                content: const Text(
+                  'Are you sure you want to delete your account? This action cannot be undone.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Delete'),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirm == true && mounted) {
+              try {
+                await AuthService().deleteAccount();
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const AuthScreen()),
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete account: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            }
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.delete_forever, color: Colors.grey),
+                const SizedBox(width: 12),
+                const Text(
+                  'Delete Account',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

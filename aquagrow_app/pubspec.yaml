@@ -40,8 +40,10 @@ dependencies:
   fl_chart: ^0.66.2
   
   # Firebase
-  firebase_core: ^2.24.2
-  firebase_database: ^10.4.0
+  firebase_core: ^4.2.1
+  firebase_auth: ^6.1.2
+  cloud_firestore: ^6.1.0
+  firebase_database: ^12.1.0
   
   # State management
   provider: ^6.1.1

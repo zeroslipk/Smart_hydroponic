@@ -108,7 +108,7 @@ class _AuthScreenState extends State<AuthScreen>
                         _buildGlassmorphicContainer(
                           width: 100,
                           height: 100,
-                          child: Icon(
+                          child: const Icon(
                             Icons.eco,
                             size: 50,
                             color: Color(0xFF7CB342),
@@ -123,7 +123,7 @@ class _AuthScreenState extends State<AuthScreen>
 
                   // Welcome text
                   ShaderMask(
-                    shaderCallback: (bounds) => LinearGradient(
+                    shaderCallback: (bounds) => const LinearGradient(
                       colors: [Color(0xFF00BCD4), Color(0xFF7CB342)],
                     ).createShader(bounds),
                     child: Text(
@@ -194,7 +194,7 @@ class _AuthScreenState extends State<AuthScreen>
                             alignment: Alignment.centerRight,
                             child: TextButton(
                               onPressed: () {},
-                              child: Text(
+                              child: const Text(
                                 'Forgot Password?',
                                 style: TextStyle(
                                   color: Color(0xFF00BCD4),
@@ -278,8 +278,8 @@ class _AuthScreenState extends State<AuthScreen>
                       child: InkWell(
                         onTap: () {},
                         borderRadius: BorderRadius.circular(16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
+                        child: const Padding(
+                          padding: EdgeInsets.all(16),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -288,7 +288,7 @@ class _AuthScreenState extends State<AuthScreen>
                                 color: Colors.white,
                                 size: 28,
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12),
                               Text(
                                 'Use Biometric',
                                 style: TextStyle(
@@ -326,7 +326,7 @@ class _AuthScreenState extends State<AuthScreen>
                         },
                         child: Text(
                           isLogin ? 'Sign Up' : 'Sign In',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Color(0xFF00BCD4),
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -355,7 +355,7 @@ class _AuthScreenState extends State<AuthScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
+              colors: const [
                 Color(0xFF006064),
                 Color(0xFF00838F),
                 Color(0xFF00ACC1),
@@ -437,7 +437,7 @@ class _AuthScreenState extends State<AuthScreen>
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-          prefixIcon: Icon(icon, color: Color(0xFF00BCD4)),
+          prefixIcon: Icon(icon, color: const Color(0xFF00BCD4)),
           suffixIcon: suffixIcon,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(16),
@@ -461,7 +461,7 @@ class _AuthScreenState extends State<AuthScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
+              colors: const [
                 Color(0xFF00BCD4),
                 Color(0xFF00838F),
                 Color(0xFF006064),
@@ -474,9 +474,9 @@ class _AuthScreenState extends State<AuthScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: Color(0xFF00BCD4).withValues(alpha: 0.5),
+                color: const Color(0xFF00BCD4).withValues(alpha: 0.5),
                 blurRadius: 20,
-                offset: Offset(0, 10),
+                offset: const Offset(0, 10),
               ),
             ],
           ),

@@ -733,7 +733,7 @@ class WaveCirclePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final path = Path();
-    final waveHeight = 10.0;
+    const waveHeight = 10.0;
     final baseY = size.height * (1 - progress);
 
     path.moveTo(0, size.height);
