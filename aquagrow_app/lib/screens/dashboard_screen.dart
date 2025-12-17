@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import '../providers/sensor_provider.dart';
+import '../providers/alert_provider.dart';
 import 'sensor_monitoring_screen.dart';
 import 'control_panel_screen.dart';
 import 'analytics_screen.dart';
@@ -157,13 +158,18 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
           Row(
             children: [
-              _buildGlassIconButton(
-                icon: Icons.notifications_outlined,
-                badge: '3',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AlertsScreen()),
+              Consumer<AlertProvider>(
+                builder: (context, alertProvider, child) {
+                  final count = alertProvider.unreadCount;
+                  return _buildGlassIconButton(
+                    icon: Icons.notifications_outlined,
+                    badge: count > 0 ? (count > 9 ? '9+' : count.toString()) : null,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AlertsScreen()),
+                      ).then((_) => alertProvider.refresh());
+                    },
                   );
                 },
               ),
@@ -824,30 +830,93 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               TextButton(
                 onPressed: () {
+                  final alertProvider = context.read<AlertProvider>();
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const AlertsScreen()),
-                  );
+                  ).then((_) => alertProvider.refresh());
                 },
                 child: const Text('View All'),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _buildAlertBubble(
-            icon: Icons.warning_amber_rounded,
-            title: 'Temperature Rising',
-            subtitle: '28°C detected',
-            time: '2h ago',
-            color: const Color(0xFFFFA726),
-          ),
-          const SizedBox(height: 12),
-          _buildAlertBubble(
-            icon: Icons.info_outline,
-            title: 'Pump Scheduled',
-            subtitle: 'Next cycle in 30 minutes',
-            time: '5h ago',
-            color: const Color(0xFF00BCD4),
+          Consumer<AlertProvider>(
+            builder: (context, alertProvider, child) {
+              final alerts = alertProvider.alerts.take(3).toList();
+              
+              if (alerts.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7CB342).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_circle_outline,
+                          color: Color(0xFF7CB342),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'All Clear',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'No alerts at the moment',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              
+              return Column(
+                children: alerts.map((alert) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildAlertBubble(
+                      icon: alert.icon,
+                      title: alert.title,
+                      subtitle: alert.message,
+                      time: alert.timeAgo,
+                      color: alert.color,
+                    ),
+                  );
+                }).toList(),
+              );
+            },
           ),
         ],
       ),

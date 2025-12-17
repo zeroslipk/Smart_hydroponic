@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 import '../models/sensor_reading.dart';
+import '../models/sensor_activity.dart';
 import '../services/firebase_service.dart';
+import '../services/database_service.dart';
 import 'dart:async';
 
 class SensorProvider with ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
+  final DatabaseService _db = DatabaseService();
   
   Map<String, SensorReading> _sensors = {};
   bool _isLoading = true;
   bool _isConnected = false;
   String? _error;
   DateTime? _lastUpdate;
+  
+  // Callback for alert checking (set by AlertProvider)
+  Function(List<SensorReading>)? onSensorUpdate;
   
   StreamSubscription? _sensorSubscription;
   StreamSubscription? _connectionSubscription;
@@ -54,6 +60,13 @@ class SensorProvider with ChangeNotifier {
             _isLoading = false;
             _lastUpdate = DateTime.now();
             _error = null;
+            
+            // Store sensor activity in SQLite (throttled)
+            _logSensorActivity(data.values.toList());
+            
+            // Trigger alert check callback
+            onSensorUpdate?.call(data.values.toList());
+            
             notifyListeners();
           },
           onError: (error) {
@@ -62,6 +75,31 @@ class SensorProvider with ChangeNotifier {
             notifyListeners();
           },
         );
+  }
+  
+  // Log sensor readings to SQLite (throttled to once per minute)
+  DateTime? _lastLogTime;
+  Future<void> _logSensorActivity(List<SensorReading> sensors) async {
+    if (_lastLogTime != null &&
+        DateTime.now().difference(_lastLogTime!) < const Duration(minutes: 1)) {
+      return;
+    }
+    _lastLogTime = DateTime.now();
+    
+    for (final sensor in sensors) {
+      try {
+        await _db.insertSensorActivity(SensorActivity(
+          sensorId: sensor.id,
+          sensorName: sensor.displayName,
+          value: sensor.value,
+          unit: sensor.unit,
+          status: sensor.status,
+          timestamp: DateTime.now(),
+        ));
+      } catch (e) {
+        debugPrint('Error logging sensor activity: $e');
+      }
+    }
   }
 
   // Get specific sensor

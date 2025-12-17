@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/sensor_provider.dart';
+import 'providers/alert_provider.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -19,14 +20,43 @@ void main() async {
   runApp(const AquaGrowApp());
 }
 
-class AquaGrowApp extends StatelessWidget {
+class AquaGrowApp extends StatefulWidget {
   const AquaGrowApp({super.key});
+
+  @override
+  State<AquaGrowApp> createState() => _AquaGrowAppState();
+}
+
+class _AquaGrowAppState extends State<AquaGrowApp> {
+  late final SensorProvider _sensorProvider;
+  late final AlertProvider _alertProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _sensorProvider = SensorProvider();
+    _alertProvider = AlertProvider();
+    
+    // Link sensor updates to alert checking
+    _sensorProvider.onSensorUpdate = (sensors) {
+      debugPrint('Checking ${sensors.length} sensors for alerts...');
+      _alertProvider.checkAllSensors(sensors);
+    };
+  }
+
+  @override
+  void dispose() {
+    _sensorProvider.dispose();
+    _alertProvider.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => SensorProvider()),
+        ChangeNotifierProvider.value(value: _sensorProvider),
+        ChangeNotifierProvider.value(value: _alertProvider),
       ],
       child: MaterialApp(
         title: 'AquaGrow - Smart Hydroponic',
