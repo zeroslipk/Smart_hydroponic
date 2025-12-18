@@ -612,6 +612,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                     icon: Icons.history,
                     label: 'History',
                     color: sensor.color,
+                    onTap: () => _showHistoryDialog(sensor),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -620,6 +621,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                     icon: Icons.tune,
                     label: 'Calibrate',
                     color: sensor.color,
+                    onTap: () => _showCalibrationDialog(sensor),
                   ),
                 ),
               ],
@@ -657,6 +659,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
     required IconData icon,
     required String label,
     required Color color,
+    required VoidCallback onTap,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -666,7 +669,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {},
+          onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -685,6 +688,229 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  void _showHistoryDialog(SensorData sensor) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Icon(sensor.icon, color: sensor.color, size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  '${sensor.name} History',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            // Stats summary
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: sensor.color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildHistoryStat('Min', sensor.min.toStringAsFixed(1), sensor.unit),
+                  Container(width: 1, height: 40, color: sensor.color.withValues(alpha: 0.3)),
+                  _buildHistoryStat('Avg', sensor.avg.toStringAsFixed(1), sensor.unit),
+                  Container(width: 1, height: 40, color: sensor.color.withValues(alpha: 0.3)),
+                  _buildHistoryStat('Max', sensor.max.toStringAsFixed(1), sensor.unit),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Last 24 hours of readings stored locally',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildHistoryStat(String label, String value, String unit) {
+    return Column(
+      children: [
+        Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+        const SizedBox(height: 4),
+        Text('$value$unit', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+  
+  void _showCalibrationDialog(SensorData sensor) {
+    double offset = 0.0;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: sensor.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.tune, color: sensor.color, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Calibrate ${sensor.name}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Current reading: ${sensor.value.toStringAsFixed(1)}${sensor.unit}',
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              const Text('Calibration Offset', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Slider(
+                      value: offset,
+                      min: -10,
+                      max: 10,
+                      divisions: 200,
+                      activeColor: sensor.color,
+                      label: offset >= 0 ? '+${offset.toStringAsFixed(1)}' : offset.toStringAsFixed(1),
+                      onChanged: (v) => setModalState(() => offset = v),
+                    ),
+                  ),
+                  Container(
+                    width: 60,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: sensor.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      offset >= 0 ? '+${offset.toStringAsFixed(1)}' : offset.toStringAsFixed(1),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontWeight: FontWeight.bold, color: sensor.color),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Adjusted reading: ${(sensor.value + offset).toStringAsFixed(1)}${sensor.unit}',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 24),
+              
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${sensor.name} calibration saved (offset: ${offset >= 0 ? '+' : ''}${offset.toStringAsFixed(1)})'),
+                            backgroundColor: sensor.color,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: sensor.color,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Apply'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

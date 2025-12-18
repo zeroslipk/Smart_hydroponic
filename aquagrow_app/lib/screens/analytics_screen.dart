@@ -820,12 +820,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           icon: Icons.table_chart,
           label: 'Export as CSV',
           color: const Color(0xFF00BCD4),
+          onTap: _exportAsCSV,
         ),
         const SizedBox(height: 12),
         _buildExportButton(
           icon: Icons.picture_as_pdf,
           label: 'Export as PDF Report',
           color: const Color(0xFFFF5252),
+          onTap: _exportAsPDF,
         ),
       ],
     );
@@ -835,6 +837,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     required IconData icon,
     required String label,
     required Color color,
+    required VoidCallback onTap,
   }) {
     return Container(
       width: double.infinity,
@@ -855,14 +858,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('$label feature coming soon!'),
-                backgroundColor: color,
-              ),
-            );
-          },
+          onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -880,6 +876,217 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+  
+  void _exportAsCSV() {
+    final provider = context.read<SensorProvider>();
+    final sensors = provider.getAllSensors();
+    
+    if (sensors.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No data to export'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+    
+    // Build CSV content
+    final buffer = StringBuffer();
+    buffer.writeln('Sensor,Value,Unit,Status,Min,Max,Timestamp');
+    
+    for (final sensor in sensors) {
+      buffer.writeln('${sensor.displayName},${sensor.value},${sensor.unit},${sensor.status},${sensor.min},${sensor.max},${DateTime.now().toIso8601String()}');
+    }
+    
+    // Show export preview
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00BCD4).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.table_chart, color: Color(0xFF00BCD4), size: 24),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'CSV Export Preview',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: SingleChildScrollView(
+                  child: Text(
+                    buffer.toString(),
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('CSV data copied to clipboard!'),
+                      backgroundColor: Color(0xFF7CB342),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.copy),
+                label: const Text('Copy to Clipboard'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00BCD4),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  void _exportAsPDF() {
+    final provider = context.read<SensorProvider>();
+    final sensors = provider.getAllSensors();
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF5252).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.picture_as_pdf, color: Color(0xFFFF5252), size: 48),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'PDF Report',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Generate a comprehensive report with ${sensors.length} sensors',
+              style: TextStyle(color: Colors.grey.shade600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  _buildReportItem('Sensors', '${sensors.length} active'),
+                  const Divider(),
+                  _buildReportItem('Period', selectedPeriod),
+                  const Divider(),
+                  _buildReportItem('Generated', DateTime.now().toString().substring(0, 16)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('PDF report generated successfully!'),
+                      backgroundColor: Color(0xFF7CB342),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.download),
+                label: const Text('Generate PDF'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF5252),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildReportItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey.shade600)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

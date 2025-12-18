@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../models/alert_model.dart';
 import '../services/database_service.dart';
+import '../services/voice_service.dart';
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({super.key});
@@ -13,6 +14,7 @@ class AlertsScreen extends StatefulWidget {
 class _AlertsScreenState extends State<AlertsScreen>
     with TickerProviderStateMixin {
   final DatabaseService _db = DatabaseService();
+  final VoiceService _voiceService = VoiceService();
   List<AlertModel> _alerts = [];
   bool _isLoading = true;
   AlertSeverity? _selectedFilter;
@@ -26,6 +28,7 @@ class _AlertsScreenState extends State<AlertsScreen>
       vsync: this,
     )..repeat(reverse: true);
     _loadAlerts();
+    _voiceService.initialize();
   }
 
   @override
@@ -478,6 +481,23 @@ class _AlertsScreenState extends State<AlertsScreen>
                               ),
                             ),
                             const Spacer(),
+                            // Speaker button
+                            GestureDetector(
+                              onTap: () => _voiceService.speakAlert(alert),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: alert.color.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.volume_up,
+                                  size: 16,
+                                  color: alert.color,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
                             if (!alert.isAcknowledged)
                               GestureDetector(
                                 onTap: () => _acknowledgeAlert(alert),

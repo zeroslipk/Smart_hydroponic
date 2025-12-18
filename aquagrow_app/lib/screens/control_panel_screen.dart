@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import '../services/database_service.dart';
+import '../models/scheduled_task.dart';
+import '../models/actuator_activity.dart';
 
 class ControlPanelScreen extends StatefulWidget {
   const ControlPanelScreen({super.key});
@@ -12,9 +15,14 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
     with TickerProviderStateMixin {
   late AnimationController _flowController;
   late AnimationController _splashController;
+  
+  final DatabaseService _db = DatabaseService();
+  List<ScheduledTask> _scheduledTasks = [];
+  List<ActuatorActivity> _controlHistory = [];
 
   final List<ActuatorData> actuators = [
     ActuatorData(
+      id: 'pump',
       name: 'Water Pump',
       icon: Icons.water_drop,
       isActive: true,
@@ -22,6 +30,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
       runtime: '4h 23m',
     ),
     ActuatorData(
+      id: 'lights',
       name: 'LED Grow Lights',
       icon: Icons.lightbulb,
       isActive: true,
@@ -29,6 +38,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
       runtime: '12h 45m',
     ),
     ActuatorData(
+      id: 'fan',
       name: 'Cooling Fan',
       icon: Icons.air,
       isActive: false,
@@ -49,6 +59,35 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
+    
+    _loadData();
+  }
+  
+  Future<void> _loadData() async {
+    final tasks = await _db.getScheduledTasks();
+    final history = await _db.getActuatorActivities(limit: 10);
+    setState(() {
+      _scheduledTasks = tasks;
+      _controlHistory = history;
+    });
+  }
+  
+  Future<void> _toggleActuator(ActuatorData actuator) async {
+    _splashController.forward(from: 0);
+    setState(() {
+      actuator.isActive = !actuator.isActive;
+    });
+    
+    // Log to SQLite
+    await _db.insertActuatorActivity(ActuatorActivity(
+      actuatorId: actuator.id,
+      actuatorName: actuator.name,
+      isOn: actuator.isActive,
+      actionType: ActuatorActionType.manual,
+      timestamp: DateTime.now(),
+    ));
+    
+    _loadData(); // Refresh history
   }
 
   @override
@@ -267,12 +306,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
               children: [
                 // Icon with splash effect
                 GestureDetector(
-                  onTap: () {
-                    _splashController.forward(from: 0);
-                    setState(() {
-                      actuator.isActive = !actuator.isActive;
-                    });
-                  },
+                  onTap: () => _toggleActuator(actuator),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
@@ -382,12 +416,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
 
                 // Toggle switch with liquid animation
                 GestureDetector(
-                  onTap: () {
-                    _splashController.forward(from: 0);
-                    setState(() {
-                      actuator.isActive = !actuator.isActive;
-                    });
-                  },
+                  onTap: () => _toggleActuator(actuator),
                   child: Container(
                     width: 56,
                     height: 32,
@@ -492,26 +521,35 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
           ),
           child: Column(
             children: [
-              _buildScheduleItem(
-                icon: Icons.water_drop,
-                title: 'Water Pump Schedule',
-                subtitle: 'Every 2 hours, 10 min duration',
-                isActive: true,
-                color: Color(0xFF00BCD4),
-              ),
-              Divider(height: 1),
-              _buildScheduleItem(
-                icon: Icons.lightbulb,
-                title: 'Lighting Schedule',
-                subtitle: '6:00 AM - 10:00 PM daily',
-                isActive: true,
-                color: Color(0xFFFFA726),
-              ),
-              Divider(height: 1),
+              if (_scheduledTasks.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Icon(Icons.schedule, size: 48, color: Colors.grey.shade300),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No schedules yet',
+                        style: TextStyle(color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...List.generate(_scheduledTasks.length, (index) {
+                  final task = _scheduledTasks[index];
+                  return Column(
+                    children: [
+                      _buildScheduleItemFromTask(task),
+                      if (index < _scheduledTasks.length - 1) const Divider(height: 1),
+                    ],
+                  );
+                }),
+              const Divider(height: 1),
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () {},
+                  onTap: () => _showAddScheduleDialog(),
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -538,14 +576,8 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
       ],
     );
   }
-
-  Widget _buildScheduleItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool isActive,
-    required Color color,
-  }) {
+  
+  Widget _buildScheduleItemFromTask(ScheduledTask task) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -553,10 +585,10 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: task.color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(task.icon, color: task.color, size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -564,7 +596,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  '${task.actuatorName} Schedule',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -573,7 +605,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  subtitle,
+                  task.scheduleDescription,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.black54,
@@ -583,14 +615,238 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
             ),
           ),
           Switch(
-            value: isActive,
-            onChanged: (value) {},
-            activeThumbColor: color,
+            value: task.isEnabled,
+            onChanged: (value) async {
+              await _db.toggleScheduledTask(task.id!, value);
+              _loadData();
+            },
+            activeThumbColor: task.color,
           ),
         ],
       ),
     );
   }
+  
+  void _showAddScheduleDialog() {
+    String selectedActuator = 'pump';
+    String scheduleType = 'interval';
+    int intervalHours = 2;
+    int durationMinutes = 10;
+    TimeOfDay startTime = const TimeOfDay(hour: 6, minute: 0);
+    TimeOfDay endTime = const TimeOfDay(hour: 22, minute: 0);
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Add Schedule',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Actuator selection
+                const Text('Select Actuator', style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _buildChip('Pump', 'pump', selectedActuator, (v) => setModalState(() => selectedActuator = v)),
+                    _buildChip('Lights', 'lights', selectedActuator, (v) => setModalState(() => selectedActuator = v)),
+                    _buildChip('Fan', 'fan', selectedActuator, (v) => setModalState(() => selectedActuator = v)),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                
+                // Schedule type
+                const Text('Schedule Type', style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _buildChip('Interval', 'interval', scheduleType, (v) => setModalState(() => scheduleType = v)),
+                    _buildChip('Daily', 'daily', scheduleType, (v) => setModalState(() => scheduleType = v)),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                
+                if (scheduleType == 'interval') ...[
+                  const Text('Run every', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          value: intervalHours.toDouble(),
+                          min: 1,
+                          max: 12,
+                          divisions: 11,
+                          label: '$intervalHours hours',
+                          onChanged: (v) => setModalState(() => intervalHours = v.toInt()),
+                        ),
+                      ),
+                      Text('$intervalHours hrs'),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Duration', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          value: durationMinutes.toDouble(),
+                          min: 1,
+                          max: 60,
+                          divisions: 59,
+                          label: '$durationMinutes min',
+                          onChanged: (v) => setModalState(() => durationMinutes = v.toInt()),
+                        ),
+                      ),
+                      Text('$durationMinutes min'),
+                    ],
+                  ),
+                ] else ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Start Time', style: TextStyle(fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: () async {
+                                final time = await showTimePicker(context: context, initialTime: startTime);
+                                if (time != null) setModalState(() => startTime = time);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(startTime.format(context)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('End Time', style: TextStyle(fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: () async {
+                                final time = await showTimePicker(context: context, initialTime: endTime);
+                                if (time != null) setModalState(() => endTime = time);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(endTime.format(context)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 24),
+                
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final actuatorNames = {'pump': 'Water Pump', 'lights': 'LED Grow Lights', 'fan': 'Cooling Fan'};
+                      await _db.insertScheduledTask(ScheduledTask(
+                        actuatorId: selectedActuator,
+                        actuatorName: actuatorNames[selectedActuator]!,
+                        scheduleType: scheduleType,
+                        intervalMinutes: scheduleType == 'interval' ? intervalHours * 60 : null,
+                        startTime: scheduleType == 'daily' ? '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}' : null,
+                        endTime: scheduleType == 'daily' ? '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}' : null,
+                        durationMinutes: durationMinutes,
+                        createdAt: DateTime.now(),
+                      ));
+                      if (context.mounted) Navigator.pop(context);
+                      _loadData();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00BCD4),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Create Schedule', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildChip(String label, String value, String selected, Function(String) onSelect) {
+    final isSelected = value == selected;
+    return GestureDetector(
+      onTap: () => onSelect(value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF00BCD4) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildControlHistory() {
     return Column(
@@ -617,33 +873,42 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
               ),
             ],
           ),
-          child: Column(
-            children: [
-              _buildHistoryItem(
-                icon: Icons.water_drop,
-                title: 'Pump turned ON',
-                time: '2 hours ago',
-                type: 'Manual',
-                color: Color(0xFF00BCD4),
-              ),
-              Divider(height: 1),
-              _buildHistoryItem(
-                icon: Icons.lightbulb,
-                title: 'Lights turned OFF',
-                time: '5 hours ago',
-                type: 'Scheduled',
-                color: Color(0xFFFFA726),
-              ),
-              Divider(height: 1),
-              _buildHistoryItem(
-                icon: Icons.air,
-                title: 'Fan turned ON',
-                time: '8 hours ago',
-                type: 'Auto',
-                color: Color(0xFF66BB6A),
-              ),
-            ],
-          ),
+          child: _controlHistory.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Icon(Icons.history, size: 48, color: Colors.grey.shade300),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No activity yet',
+                        style: TextStyle(color: Colors.grey.shade500),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Control actions will appear here',
+                        style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                )
+              : Column(
+                  children: List.generate(_controlHistory.length, (index) {
+                    final activity = _controlHistory[index];
+                    return Column(
+                      children: [
+                        _buildHistoryItem(
+                          icon: activity.icon,
+                          title: activity.actionDescription,
+                          time: activity.timeAgo,
+                          type: activity.actionTypeLabel,
+                          color: activity.color,
+                        ),
+                        if (index < _controlHistory.length - 1) const Divider(height: 1),
+                      ],
+                    );
+                  }),
+                ),
         ),
       ],
     );
@@ -794,6 +1059,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
 }
 
 class ActuatorData {
+  String id;
   String name;
   IconData icon;
   bool isActive;
@@ -801,6 +1067,7 @@ class ActuatorData {
   String runtime;
 
   ActuatorData({
+    required this.id,
     required this.name,
     required this.icon,
     required this.isActive,

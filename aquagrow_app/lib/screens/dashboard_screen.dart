@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import '../providers/sensor_provider.dart';
 import '../providers/alert_provider.dart';
+import '../services/voice_service.dart';
+import '../widgets/voice_button.dart';
 import 'sensor_monitoring_screen.dart';
 import 'control_panel_screen.dart';
 import 'analytics_screen.dart';
@@ -23,6 +25,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   final int _selectedIndex = 0;
   late AnimationController _pulseController;
   late AnimationController _waveController;
+  
+  // Voice
+  final VoiceService _voiceService = VoiceService();
+  bool _isListening = false;
+  String _recognizedText = '';
 
   @override
   void initState() {
@@ -36,6 +43,70 @@ class _DashboardScreenState extends State<DashboardScreen>
       duration: const Duration(seconds: 3),
       vsync: this,
     )..repeat();
+    
+    _initVoice();
+  }
+  
+  void _initVoice() {
+    _voiceService.initialize();
+    
+    _voiceService.onListeningChanged = (isListening) {
+      if (mounted) setState(() => _isListening = isListening);
+    };
+    
+    _voiceService.onWordsRecognized = (text) {
+      if (mounted) setState(() => _recognizedText = text);
+    };
+    
+    _voiceService.onCommandRecognized = (command, text) {
+      _handleVoiceCommand(command);
+    };
+    
+    _voiceService.onActuatorCommand = (actuatorId, turnOn) {
+      // TODO: Implement actuator control via Firebase
+      debugPrint('Actuator command: $actuatorId -> $turnOn');
+    };
+  }
+  
+  void _handleVoiceCommand(VoiceCommand command) {
+    final sensorProvider = context.read<SensorProvider>();
+    final alertProvider = context.read<AlertProvider>();
+    
+    switch (command) {
+      case VoiceCommand.status:
+        _voiceService.speakSystemStatus(sensorProvider.getAllSensors());
+        break;
+      case VoiceCommand.temperature:
+        if (sensorProvider.temperature != null) {
+          _voiceService.speakSensor(sensorProvider.temperature!);
+        }
+        break;
+      case VoiceCommand.waterLevel:
+        if (sensorProvider.waterLevel != null) {
+          _voiceService.speakSensor(sensorProvider.waterLevel!);
+        }
+        break;
+      case VoiceCommand.pH:
+        if (sensorProvider.pH != null) {
+          _voiceService.speakSensor(sensorProvider.pH!);
+        }
+        break;
+      case VoiceCommand.tds:
+        if (sensorProvider.tds != null) {
+          _voiceService.speakSensor(sensorProvider.tds!);
+        }
+        break;
+      case VoiceCommand.light:
+        if (sensorProvider.light != null) {
+          _voiceService.speakSensor(sensorProvider.light!);
+        }
+        break;
+      case VoiceCommand.alerts:
+        _voiceService.speakAlertsSummary(alertProvider.alerts);
+        break;
+      default:
+        break;
+    }
   }
 
   @override
@@ -122,6 +193,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 ),
               ],
+            ),
+          ),
+          
+          // Voice button overlay
+          Positioned(
+            right: 16,
+            bottom: 100,
+            child: VoiceButton(
+              isListening: _isListening,
+              recognizedText: _recognizedText,
+              onPressed: () => _voiceService.toggleListening(),
+              onLongPress: () {
+                // Read full status on long press
+                final sensors = context.read<SensorProvider>().getAllSensors();
+                _voiceService.speakSystemStatus(sensors);
+              },
             ),
           ),
         ],
@@ -327,6 +414,26 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 Row(
                   children: [
+                    // Speaker button for TTS
+                    GestureDetector(
+                      onTap: () {
+                        final sensors = context.read<SensorProvider>().getAllSensors();
+                        _voiceService.speakSystemStatus(sensors);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.volume_up,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Text(
                       isAutoMode ? 'Auto' : 'Manual',
                       style: const TextStyle(
