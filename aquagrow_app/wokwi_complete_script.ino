@@ -133,9 +133,10 @@ void loop() {
     int tdsRaw = analogRead(TDS_PIN);
     int tdsValue = map(tdsRaw, 0, 4095, 500, 2000);
     
-    // 5. Light Level (from Photoresistor: 0-1000 lux)
+    // 5. Light Level (from Photoresistor: 0-100000 lux)
+    // Note: Photoresistor can measure from 0 (dark) to 100,000+ lux (direct sunlight)
     int lightRaw = analogRead(LIGHT_SENSOR_PIN);
-    int lightLevel = map(lightRaw, 0, 4095, 0, 1000);
+    int lightLevel = map(lightRaw, 0, 4095, 0, 100000);
     
     // ========== DETERMINE STATUS ==========
     
@@ -143,7 +144,8 @@ void loop() {
     String waterStatus = (waterLevel >= 40) ? "good" : "critical";
     String phStatus = (phValue >= 5.8 && phValue <= 6.8) ? "optimal" : "warning";
     String tdsStatus = (tdsValue >= 800 && tdsValue <= 1500) ? "good" : "warning";
-    String lightStatus = (lightLevel >= 200 && lightLevel <= 800) ? "good" : "warning";
+    // Light status: Good range is 100-50000 lux (indoor lighting to bright daylight)
+    String lightStatus = (lightLevel >= 100 && lightLevel <= 50000) ? "good" : "warning";
     
     // ========== PRINT TO SERIAL ==========
     
@@ -222,8 +224,8 @@ bool uploadAllSensors(float temp, int water, float ph, int tds, int light,
   doc["light"]["unit"] = "lux";
   doc["light"]["timestamp"] = timestamp;
   doc["light"]["status"] = lightStatus;
-  doc["light"]["min"] = 200;
-  doc["light"]["max"] = 800;
+  doc["light"]["min"] = 0;
+  doc["light"]["max"] = 100000;
   
   String jsonString;
   serializeJson(doc, jsonString);

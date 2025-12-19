@@ -56,9 +56,9 @@ class AlertProvider with ChangeNotifier {
     ),
     'light': const SensorThreshold(
       criticalMin: 0.0,
-      criticalMax: 100.0,
-      warningMin: 10.0,
-      warningMax: 90.0,
+      criticalMax: 100000.0,  // Light can range from 0 to 100,000+ lux (indoor to direct sunlight)
+      warningMin: 100.0,       // Below 100 lux is dim (indoor)
+      warningMax: 50000.0,     // Above 50,000 lux is very bright (direct sunlight)
     ),
   };
 
