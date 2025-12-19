@@ -12,6 +12,7 @@ class FirebaseService {
 
   DatabaseReference get sensorsRef => _database.child('sensors');
   DatabaseReference get actuatorsRef => _database.child('controls');
+  DatabaseReference get systemRef => _database.child('system');
 
   /// Map app actuator IDs to Firebase IDs
   String _getFirebaseActuatorId(String appId) {
@@ -191,5 +192,52 @@ class FirebaseService {
       }
       return {};
     }
+  }
+
+  // ============== SYSTEM MODE ==============
+
+  /// Set system mode (auto/manual)
+  Future<void> setSystemMode(bool isAutoMode) async {
+    try {
+      await systemRef.update({
+        'mode': isAutoMode ? 'auto' : 'manual',
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+      
+      if (kDebugMode) {
+        debugPrint('FirebaseService: Set system mode to ${isAutoMode ? "auto" : "manual"}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('FirebaseService: Error setting system mode: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Get current system mode
+  Future<bool?> getSystemMode() async {
+    try {
+      final snapshot = await systemRef.child('mode').get();
+      if (snapshot.exists && snapshot.value != null) {
+        return snapshot.value.toString() == 'auto';
+      }
+      return null; // Default to auto if not set
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('FirebaseService: Error getting system mode: $e');
+      }
+      return null;
+    }
+  }
+
+  /// Stream system mode changes
+  Stream<bool?> streamSystemMode() {
+    return systemRef.child('mode').onValue.map((event) {
+      if (event.snapshot.exists && event.snapshot.value != null) {
+        return event.snapshot.value.toString() == 'auto';
+      }
+      return null;
+    });
   }
 }

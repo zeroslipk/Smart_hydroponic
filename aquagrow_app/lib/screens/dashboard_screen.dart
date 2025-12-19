@@ -53,6 +53,20 @@ class _DashboardScreenState extends State<DashboardScreen>
     
     _initVoice();
     _loadActuatorStates();
+    _loadSystemMode();
+  }
+  
+  Future<void> _loadSystemMode() async {
+    try {
+      final mode = await _firebaseService.getSystemMode();
+      if (mounted && mode != null) {
+        setState(() {
+          isAutoMode = mode;
+        });
+      }
+    } catch (e) {
+      debugPrint('DashboardScreen: Error loading system mode: $e');
+    }
   }
   
   Future<void> _loadActuatorStates() async {
@@ -517,10 +531,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                     const SizedBox(width: 8),
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
+                        final newMode = !isAutoMode;
                         setState(() {
-                          isAutoMode = !isAutoMode;
+                          isAutoMode = newMode;
                         });
+                        // Save to Firebase
+                        try {
+                          await _firebaseService.setSystemMode(newMode);
+                        } catch (e) {
+                          debugPrint('DashboardScreen: Error saving system mode: $e');
+                        }
                       },
                       child: Container(
                         width: 50,
