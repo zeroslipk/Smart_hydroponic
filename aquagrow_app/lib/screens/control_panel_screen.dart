@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../services/database_service.dart';
+import '../services/firebase_service.dart';
 import '../models/scheduled_task.dart';
 import '../models/actuator_activity.dart';
 
@@ -17,6 +18,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
   late AnimationController _splashController;
   
   final DatabaseService _db = DatabaseService();
+  final FirebaseService _firebaseService = FirebaseService();
   List<ScheduledTask> _scheduledTasks = [];
   List<ActuatorActivity> _controlHistory = [];
 
@@ -25,7 +27,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
       id: 'pump',
       name: 'Water Pump',
       icon: Icons.water_drop,
-      isActive: true,
+      isActive: false, // Will be synced from Firebase
       color: Color(0xFF00BCD4),
       runtime: '4h 23m',
     ),
@@ -33,7 +35,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
       id: 'lights',
       name: 'LED Grow Lights',
       icon: Icons.lightbulb,
-      isActive: true,
+      isActive: false, // Will be synced from Firebase
       color: Color(0xFFFFA726),
       runtime: '12h 45m',
     ),
@@ -41,7 +43,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
       id: 'fan',
       name: 'Cooling Fan',
       icon: Icons.air,
-      isActive: false,
+      isActive: false, // Will be synced from Firebase
       color: Color(0xFF66BB6A),
       runtime: '0h 0m',
     ),
@@ -66,28 +68,66 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
   Future<void> _loadData() async {
     final tasks = await _db.getScheduledTasks();
     final history = await _db.getActuatorActivities(limit: 10);
+    
+    // Load actuator states from Firebase
+    await _loadActuatorStatesFromFirebase();
+    
     setState(() {
       _scheduledTasks = tasks;
       _controlHistory = history;
     });
   }
   
+  /// Load actuator states from Firebase to sync with hardware
+  Future<void> _loadActuatorStatesFromFirebase() async {
+    try {
+      final states = await _firebaseService.getAllActuatorStates();
+      debugPrint('ControlPanelScreen: Loading actuator states from Firebase: $states');
+      
+      for (final actuator in actuators) {
+        if (states.containsKey(actuator.id)) {
+          actuator.isActive = states[actuator.id] ?? false;
+          debugPrint('ControlPanelScreen: Set ${actuator.id} to ${actuator.isActive}');
+        }
+      }
+    } catch (e) {
+      debugPrint('ControlPanelScreen: Error loading actuator states from Firebase: $e');
+    }
+  }
+  
   Future<void> _toggleActuator(ActuatorData actuator) async {
     _splashController.forward(from: 0);
+    final oldState = actuator.isActive;
     setState(() {
       actuator.isActive = !actuator.isActive;
     });
     
-    // Log to SQLite
-    await _db.insertActuatorActivity(ActuatorActivity(
-      actuatorId: actuator.id,
-      actuatorName: actuator.name,
-      isOn: actuator.isActive,
-      actionType: ActuatorActionType.manual,
-      timestamp: DateTime.now(),
-    ));
-    
-    _loadData(); // Refresh history
+    try {
+      debugPrint('ControlPanelScreen: Toggling ${actuator.id} from $oldState to ${actuator.isActive}');
+      
+      // Send command to Firebase (for hardware control)
+      await _firebaseService.setActuatorState(actuator.id, actuator.isActive);
+      
+      debugPrint('ControlPanelScreen: Successfully sent ${actuator.id} state to Firebase');
+      
+      // Log to SQLite (for history)
+      await _db.insertActuatorActivity(ActuatorActivity(
+        actuatorId: actuator.id,
+        actuatorName: actuator.name,
+        isOn: actuator.isActive,
+        actionType: ActuatorActionType.manual,
+        timestamp: DateTime.now(),
+      ));
+      
+      _loadData(); // Refresh history
+    } catch (e, stackTrace) {
+      debugPrint('ControlPanelScreen: ERROR toggling actuator: $e');
+      debugPrint('ControlPanelScreen: Stack trace: $stackTrace');
+      // Revert on error
+      setState(() {
+        actuator.isActive = oldState;
+      });
+    }
   }
 
   @override

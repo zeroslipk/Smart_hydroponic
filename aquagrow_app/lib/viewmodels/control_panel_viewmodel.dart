@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/scheduled_task.dart';
 import '../models/actuator_activity.dart';
 import '../services/database_service.dart';
+import '../services/firebase_service.dart';
 
 class ActuatorData {
   String id;
@@ -23,6 +24,7 @@ class ActuatorData {
 
 class ControlPanelViewModel extends ChangeNotifier {
   final DatabaseService _db = DatabaseService();
+  final FirebaseService _firebaseService = FirebaseService();
   
   List<ScheduledTask> _scheduledTasks = [];
   List<ActuatorActivity> _controlHistory = [];
@@ -72,23 +74,63 @@ class ControlPanelViewModel extends ChangeNotifier {
     _scheduledTasks = await _db.getScheduledTasks();
     _controlHistory = await _db.getActuatorActivities(limit: 10);
     
+    // Load actuator states from Firebase AFTER loading other data
+    await _initializeActuatorStates();
+    
     _isLoading = false;
     notifyListeners();
   }
   
+  /// Initialize actuator states from Firebase
+  Future<void> _initializeActuatorStates() async {
+    try {
+      final states = await _firebaseService.getAllActuatorStates();
+      debugPrint('ControlPanelViewModel: Loaded states from Firebase: $states');
+      
+      for (final actuator in _actuators) {
+        if (states.containsKey(actuator.id)) {
+          final newState = states[actuator.id] ?? false;
+          actuator.isActive = newState;
+          debugPrint('ControlPanelViewModel: Set ${actuator.id} to $newState');
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('ControlPanelViewModel: Error loading actuator states: $e');
+    }
+  }
+  
+  /// Toggle actuator and send command to Firebase
   Future<void> toggleActuator(ActuatorData actuator) async {
+    final oldState = actuator.isActive;
     actuator.isActive = !actuator.isActive;
     notifyListeners();
     
-    await _db.insertActuatorActivity(ActuatorActivity(
-      actuatorId: actuator.id,
-      actuatorName: actuator.name,
-      isOn: actuator.isActive,
-      actionType: ActuatorActionType.manual,
-      timestamp: DateTime.now(),
-    ));
-    
-    await loadData();
+    try {
+      debugPrint('ControlPanelViewModel: Toggling ${actuator.id} from $oldState to ${actuator.isActive}');
+      
+      // Send command to Firebase (for hardware control)
+      await _firebaseService.setActuatorState(actuator.id, actuator.isActive);
+      
+      debugPrint('ControlPanelViewModel: Successfully sent ${actuator.id} state to Firebase');
+      
+      // Log to local SQLite database (for history)
+      await _db.insertActuatorActivity(ActuatorActivity(
+        actuatorId: actuator.id,
+        actuatorName: actuator.name,
+        isOn: actuator.isActive,
+        actionType: ActuatorActionType.manual,
+        timestamp: DateTime.now(),
+      ));
+      
+      await loadData();
+    } catch (e, stackTrace) {
+      debugPrint('ControlPanelViewModel: ERROR toggling actuator: $e');
+      debugPrint('ControlPanelViewModel: Stack trace: $stackTrace');
+      // Revert on error
+      actuator.isActive = oldState;
+      notifyListeners();
+    }
   }
   
   Future<void> toggleScheduledTask(int taskId, bool enabled) async {

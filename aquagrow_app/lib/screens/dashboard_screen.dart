@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/sensor_provider.dart';
 import '../providers/alert_provider.dart';
 import '../services/voice_service.dart';
+import '../services/firebase_service.dart';
 import '../widgets/voice_button.dart';
 import 'sensor_monitoring_screen.dart';
 import 'control_panel_screen.dart';
@@ -28,8 +29,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   
   // Voice
   final VoiceService _voiceService = VoiceService();
+  final FirebaseService _firebaseService = FirebaseService();
   bool _isListening = false;
   String _recognizedText = '';
+  
+  // Actuator states for quick controls
+  bool _pumpState = false;
+  bool _lightsState = false;
+  bool _fanState = false;
 
   @override
   void initState() {
@@ -45,6 +52,68 @@ class _DashboardScreenState extends State<DashboardScreen>
     )..repeat();
     
     _initVoice();
+    _loadActuatorStates();
+  }
+  
+  Future<void> _loadActuatorStates() async {
+    try {
+      final states = await _firebaseService.getAllActuatorStates();
+      if (mounted) {
+        setState(() {
+          _pumpState = states['pump'] ?? false;
+          _lightsState = states['lights'] ?? false;
+          _fanState = states['fan'] ?? false;
+        });
+      }
+    } catch (e) {
+      debugPrint('DashboardScreen: Error loading actuator states: $e');
+    }
+  }
+  
+  Future<void> _toggleQuickActuator(String actuatorId, bool currentState) async {
+    try {
+      final newState = !currentState;
+      debugPrint('DashboardScreen: Toggling $actuatorId from $currentState to $newState');
+      
+      // Update local state immediately for UI responsiveness
+      if (mounted) {
+        setState(() {
+          switch (actuatorId) {
+            case 'pump':
+              _pumpState = newState;
+              break;
+            case 'lights':
+              _lightsState = newState;
+              break;
+            case 'fan':
+              _fanState = newState;
+              break;
+          }
+        });
+      }
+      
+      // Send to Firebase
+      await _firebaseService.setActuatorState(actuatorId, newState);
+      debugPrint('DashboardScreen: Successfully toggled $actuatorId to $newState');
+    } catch (e) {
+      debugPrint('DashboardScreen: Error toggling actuator $actuatorId: $e');
+      // Revert on error
+      if (mounted) {
+        setState(() {
+          switch (actuatorId) {
+            case 'pump':
+              _pumpState = currentState;
+              break;
+            case 'lights':
+              _lightsState = currentState;
+              break;
+            case 'fan':
+              _fanState = currentState;
+              break;
+          }
+        });
+      }
+    }
   }
   
   void _initVoice() {
@@ -62,9 +131,13 @@ class _DashboardScreenState extends State<DashboardScreen>
       _handleVoiceCommand(command);
     };
     
-    _voiceService.onActuatorCommand = (actuatorId, turnOn) {
-      // TODO: Implement actuator control via Firebase
-      debugPrint('Actuator command: $actuatorId -> $turnOn');
+    _voiceService.onActuatorCommand = (actuatorId, turnOn) async {
+      try {
+        await _firebaseService.setActuatorState(actuatorId, turnOn);
+        debugPrint('Voice command: Actuator $actuatorId set to ${turnOn ? "ON" : "OFF"} via Firebase');
+      } catch (e) {
+        debugPrint('Error sending voice actuator command: $e');
+      }
     };
   }
   
@@ -171,6 +244,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: RefreshIndicator(
                     onRefresh: () async {
                       await context.read<SensorProvider>().refresh();
+                      await _loadActuatorStates();
                     },
                     color: const Color(0xFF00BCD4),
                     child: SingleChildScrollView(
@@ -841,20 +915,23 @@ class _DashboardScreenState extends State<DashboardScreen>
               _buildBlobActionButton(
                 icon: Icons.water_drop,
                 label: 'Pump',
-                isActive: true,
+                isActive: _pumpState,
                 color: const Color(0xFF00BCD4),
+                onTap: () => _toggleQuickActuator('pump', _pumpState),
               ),
               _buildBlobActionButton(
                 icon: Icons.lightbulb_outline,
                 label: 'Lights',
-                isActive: true,
+                isActive: _lightsState,
                 color: const Color(0xFFFFA726),
+                onTap: () => _toggleQuickActuator('lights', _lightsState),
               ),
               _buildBlobActionButton(
                 icon: Icons.air,
                 label: 'Fan',
-                isActive: false,
-                color: Colors.grey,
+                isActive: _fanState,
+                color: const Color(0xFF66BB6A),
+                onTap: () => _toggleQuickActuator('fan', _fanState),
               ),
             ],
           ),
@@ -868,9 +945,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     required String label,
     required bool isActive,
     required Color color,
+    required VoidCallback onTap,
   }) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onTap,
       child: Column(
         children: [
           AnimatedContainer(
