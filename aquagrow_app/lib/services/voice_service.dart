@@ -103,14 +103,26 @@ class VoiceService {
 
   /// Speak text with optional priority (stops current speech)
   Future<void> speak(String text, {bool priority = false}) async {
-    if (!_isInitialized) await initialize();
-    
-    if (priority && _isSpeaking) {
-      await _tts.stop();
+    try {
+      if (!_isInitialized) {
+        final initialized = await initialize();
+        if (!initialized) {
+          debugPrint('VoiceService: Cannot speak - initialization failed');
+          return;
+        }
+      }
+      
+      if (priority && _isSpeaking) {
+        await _tts.stop();
+      }
+      
+      debugPrint('VoiceService: Speaking: $text');
+      await _tts.speak(text).catchError((e) {
+        debugPrint('VoiceService: Error speaking: $e');
+      });
+    } catch (e) {
+      debugPrint('VoiceService: Exception in speak(): $e');
     }
-    
-    debugPrint('VoiceService: Speaking: $text');
-    await _tts.speak(text);
   }
 
   /// Stop speaking
