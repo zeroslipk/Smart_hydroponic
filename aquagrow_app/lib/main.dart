@@ -5,17 +5,25 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/sensor_provider.dart';
 import 'providers/alert_provider.dart';
+import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
   FirebaseDatabase.instance.setPersistenceEnabled(true);
   FirebaseDatabase.instance.setPersistenceCacheSizeBytes(10000000);
+  
+  // Initialize Notification Service
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+  // Request permissions (but don't block if denied)
+  await notificationService.requestPermissions();
   
   runApp(const AquaGrowApp());
 }

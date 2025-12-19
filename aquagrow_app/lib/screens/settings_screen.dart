@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../providers/alert_provider.dart';
 import 'auth_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -23,6 +25,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double phMax = 6.8;
   double waterMin = 40;
   double waterMax = 95;
+  bool _thresholdsLoaded = false;
+
+  void _loadThresholdsFromProvider() {
+    final alertProvider = context.read<AlertProvider>();
+    final thresholds = alertProvider.thresholds;
+    
+    // Load temperature thresholds
+    if (thresholds.containsKey('temperature')) {
+      final temp = thresholds['temperature']!;
+      tempMin = temp.criticalMin;
+      tempMax = temp.criticalMax;
+    }
+    
+    // Load pH thresholds
+    if (thresholds.containsKey('pH')) {
+      final ph = thresholds['pH']!;
+      phMin = ph.criticalMin;
+      phMax = ph.criticalMax;
+    }
+    
+    // Load water level thresholds
+    if (thresholds.containsKey('waterLevel')) {
+      final water = thresholds['waterLevel']!;
+      waterMin = water.criticalMin;
+      waterMax = water.criticalMax;
+    }
+    
+    if (mounted) setState(() {});
+  }
+  
+  void _saveThresholdsToProvider() {
+    final alertProvider = context.read<AlertProvider>();
+    
+    // Update temperature thresholds
+    alertProvider.updateThreshold('temperature', SensorThreshold(
+      criticalMin: tempMin,
+      criticalMax: tempMax,
+      warningMin: tempMin + 3, // Warning is 3 units inside critical
+      warningMax: tempMax - 3,
+    ));
+    
+    // Update pH thresholds
+    alertProvider.updateThreshold('pH', SensorThreshold(
+      criticalMin: phMin,
+      criticalMax: phMax,
+      warningMin: phMin + 0.3, // Warning is 0.3 inside critical
+      warningMax: phMax - 0.3,
+    ));
+    
+    // Update water level thresholds
+    alertProvider.updateThreshold('waterLevel', SensorThreshold(
+      criticalMin: waterMin,
+      criticalMax: waterMax,
+      warningMin: waterMin + 10, // Warning is 10% inside critical
+      warningMax: waterMax - 5,
+    ));
+    
+    // Show success feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Sensor thresholds updated successfully'),
+        backgroundColor: Color(0xFF7CB342),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load thresholds once after widget tree is built
+    if (!_thresholdsLoaded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadThresholdsFromProvider();
+        _thresholdsLoaded = true;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -309,6 +389,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 tempMin = min;
                 tempMax = max;
               });
+              _saveThresholdsToProvider();
             },
           ),
           const SizedBox(height: 24),
@@ -326,6 +407,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 phMin = min;
                 phMax = max;
               });
+              _saveThresholdsToProvider();
             },
           ),
           const SizedBox(height: 24),
@@ -343,6 +425,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 waterMin = min;
                 waterMax = max;
               });
+              _saveThresholdsToProvider();
             },
           ),
         ],

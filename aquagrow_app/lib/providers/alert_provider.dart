@@ -3,6 +3,7 @@ import 'dart:async';
 import '../models/alert_model.dart';
 import '../models/sensor_reading.dart';
 import '../services/database_service.dart';
+import '../services/notification_service.dart';
 
 /// Threshold configuration for each sensor
 class SensorThreshold {
@@ -21,6 +22,7 @@ class SensorThreshold {
 
 class AlertProvider with ChangeNotifier {
   final DatabaseService _db = DatabaseService();
+  final NotificationService _notificationService = NotificationService();
 
   List<AlertModel> _alerts = [];
   int _unreadCount = 0;
@@ -54,9 +56,9 @@ class AlertProvider with ChangeNotifier {
     ),
     'light': const SensorThreshold(
       criticalMin: 0.0,
-      criticalMax: 100.0,
-      warningMin: 10.0,
-      warningMax: 90.0,
+      criticalMax: 100000.0,  // Light can range from 0 to 100,000+ lux (indoor to direct sunlight)
+      warningMin: 100.0,       // Below 100 lux is dim (indoor)
+      warningMax: 50000.0,     // Above 50,000 lux is very bright (direct sunlight)
     ),
   };
 
@@ -161,6 +163,11 @@ class AlertProvider with ChangeNotifier {
       _lastAlertTime[sensor.id] = DateTime.now();
       _wasInAlert[sensor.id] = true;
       await _loadAlerts();
+      
+      // Show notification for critical and warning alerts
+      if (severity == AlertSeverity.critical || severity == AlertSeverity.warning) {
+        await _notificationService.showAlertNotification(alert);
+      }
       
       debugPrint('AlertProvider: Alert created! Total alerts: ${_alerts.length}');
     } else {

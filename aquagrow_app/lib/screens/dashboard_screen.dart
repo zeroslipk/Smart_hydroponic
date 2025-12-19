@@ -53,6 +53,20 @@ class _DashboardScreenState extends State<DashboardScreen>
     
     _initVoice();
     _loadActuatorStates();
+    _loadSystemMode();
+  }
+  
+  Future<void> _loadSystemMode() async {
+    try {
+      final mode = await _firebaseService.getSystemMode();
+      if (mounted && mode != null) {
+        setState(() {
+          isAutoMode = mode;
+        });
+      }
+    } catch (e) {
+      debugPrint('DashboardScreen: Error loading system mode: $e');
+    }
   }
   
   Future<void> _loadActuatorStates() async {
@@ -135,6 +149,30 @@ class _DashboardScreenState extends State<DashboardScreen>
       try {
         await _firebaseService.setActuatorState(actuatorId, turnOn);
         debugPrint('Voice command: Actuator $actuatorId set to ${turnOn ? "ON" : "OFF"} via Firebase');
+        
+        // Update local state immediately to reflect the change in quick controls
+        if (mounted) {
+          setState(() {
+            switch (actuatorId) {
+              case 'pump':
+                _pumpState = turnOn;
+                break;
+              case 'lights':
+                _lightsState = turnOn;
+                break;
+              case 'fan':
+                _fanState = turnOn;
+                break;
+            }
+          });
+        }
+        
+        // Also reload states from Firebase after a short delay to ensure sync
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _loadActuatorStates();
+          }
+        });
       } catch (e) {
         debugPrint('Error sending voice actuator command: $e');
       }
@@ -175,7 +213,25 @@ class _DashboardScreenState extends State<DashboardScreen>
         }
         break;
       case VoiceCommand.alerts:
+        // Speak alerts summary and navigate to alerts screen
         _voiceService.speakAlertsSummary(alertProvider.alerts);
+        // Navigate to alerts screen after TTS starts
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted && context.mounted) {
+            try {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AlertsScreen()),
+              ).then((_) {
+                if (mounted) {
+                  alertProvider.refresh();
+                }
+              });
+            } catch (e) {
+              debugPrint('DashboardScreen: Error navigating to alerts: $e');
+            }
+          }
+        });
         break;
       default:
         break;
@@ -490,9 +546,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                   children: [
                     // Speaker button for TTS
                     GestureDetector(
-                      onTap: () {
-                        final sensors = context.read<SensorProvider>().getAllSensors();
-                        _voiceService.speakSystemStatus(sensors);
+                      onTap: () async {
+                        try {
+                          final sensors = context.read<SensorProvider>().getAllSensors();
+                          await _voiceService.speakSystemStatus(sensors);
+                          debugPrint('DashboardScreen: TTS triggered via speaker button');
+                        } catch (e) {
+                          debugPrint('DashboardScreen: Error with speaker button TTS: $e');
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.all(6),
@@ -517,10 +578,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                     const SizedBox(width: 8),
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
+                        final newMode = !isAutoMode;
                         setState(() {
-                          isAutoMode = !isAutoMode;
+                          isAutoMode = newMode;
                         });
+                        // Save to Firebase
+                        try {
+                          await _firebaseService.setSystemMode(newMode);
+                        } catch (e) {
+                          debugPrint('DashboardScreen: Error saving system mode: $e');
+                        }
                       },
                       child: Container(
                         width: 50,
