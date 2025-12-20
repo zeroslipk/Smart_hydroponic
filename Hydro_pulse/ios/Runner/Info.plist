@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Aquagrow App</string>
+	<string>HydroPulse</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -26,12 +26,12 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>HydroPulse needs microphone access for voice commands</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>HydroPulse needs speech recognition to control your hydroponic system with voice commands</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>AquaGrow needs speech recognition to control your hydroponic system with voice commands</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>AquaGrow needs microphone access for voice commands</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
