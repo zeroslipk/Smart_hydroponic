@@ -81,7 +81,7 @@ class _AquaGrowAppState extends State<AquaGrowApp> {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
-            title: 'AquaGrow - Smart Hydroponic',
+            title: 'HydroPulse - Smart Hydroponic',
             debugShowCheckedModeBanner: false,
             theme: themeProvider.themeData,
             home: const SplashScreen(),

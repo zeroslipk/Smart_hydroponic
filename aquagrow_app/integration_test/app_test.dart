@@ -11,12 +11,12 @@ void main() {
       app.main();
       
       // Wait for the Splash Screen delay (4 seconds in code)
-      // We wait 6 seconds to be safe and allow animations
-      await Future.delayed(const Duration(seconds: 6));
+      // We wait 8 seconds to be safe and allow animations on slower devices
+      await Future.delayed(const Duration(seconds: 8));
       await tester.pump(); // Use pump() instead of pumpAndSettle() due to infinite Splash animation
 
       // Check if we are stuck on Auth Screen
-      final loginFinder = find.text('Join AquaGrow');
+      final loginFinder = find.text('Join HydroPulse');
       final welcomeFinder = find.text('Welcome Back');
       
       if (loginFinder.evaluate().isNotEmpty || welcomeFinder.evaluate().isNotEmpty) {
@@ -33,14 +33,28 @@ void main() {
       // If we are here, we should be on Dashboard
       final pumpFinder = find.text('Pump');
       
-      // Verify Dashboard is loaded (check for AquaGrow title which is in AppBar)
-      expect(find.text('AquaGrow'), findsOneWidget);
+      // Wait for Dashboard to settle and Pump button to appear
+      bool dashLoaded = false;
+      for (int i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+        if (find.text('HydroPulse System').evaluate().isNotEmpty) {
+          dashLoaded = true;
+          break;
+        }
+      }
+      
+      if (!dashLoaded) {
+        fail('Dashboard did not load in time (Stuck on Splash?)');
+      }
+
+      // Verify Dashboard is loaded (check for Unique Subtitle)
+      expect(find.text('HydroPulse System'), findsOneWidget);
       print('TEST STATUS: Dashboard Loaded');
 
-      // Find the Pump button
-      // final pumpFinder = find.text('Pump'); // ALREADY DECLARED ABOVE
-      
       // Ensure the button is visible (scroll if needed)
+      // We loop briefly to ensure it's in the tree before ensuring visibility
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      
       await tester.ensureVisible(pumpFinder);
       await tester.pump(); // Cannot use pumpAndSettle due to infinite animations
       print('TEST STATUS: Pump Switch Found and Visible');
@@ -55,7 +69,7 @@ void main() {
       print('TEST STATUS: Tap Complete');
 
       // Verify we are still running
-      expect(find.text('AquaGrow'), findsOneWidget);
+      expect(find.text('HydroPulse'), findsOneWidget);
       print('TEST STATUS: Test Finished Successfully!');
     });
   });
