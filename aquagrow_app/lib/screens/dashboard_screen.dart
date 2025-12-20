@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import '../providers/sensor_provider.dart';
 import '../providers/alert_provider.dart';
+import '../models/sensor_reading.dart';
 import '../services/voice_service.dart';
 import '../services/firebase_service.dart';
 import '../widgets/voice_button.dart';
@@ -838,12 +839,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                 itemCount: sensors.length,
                 itemBuilder: (context, index) {
                   final sensor = sensors[index];
+                  final alertProvider = context.watch<AlertProvider>();
+                  // Calculate progress using AlertProvider thresholds instead of Firebase min/max
+                  final progress = _calculateProgressFromThresholds(sensor, alertProvider);
                   return _buildLiquidSensorCard(
                     icon: sensor.icon,
                     label: sensor.displayName,
                     value: sensor.displayValue,
                     unit: sensor.unit,
-                    progress: sensor.progress,
+                    progress: progress,
+                    progressPercentage: (progress * 100).toInt(), // For display (can be >100)
                     color: sensor.sensorColor,
                   );
                 },
@@ -855,12 +860,32 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  /// Calculate progress using AlertProvider thresholds instead of Firebase min/max
+  /// Progress can exceed 1.0 (100%) when value exceeds max threshold
+  double _calculateProgressFromThresholds(SensorReading sensor, AlertProvider alertProvider) {
+    final thresholds = alertProvider.thresholds[sensor.id];
+    if (thresholds == null) {
+      // Fallback to Firebase min/max if no threshold found
+      return sensor.progress;
+    }
+    
+    final min = thresholds.criticalMin;
+    final max = thresholds.criticalMax;
+    
+    if (max == min) return 0.0;
+    // Allow progress to exceed 1.0 when value > max (e.g., value=42 with max=32 gives 1.3125 = 131.25%)
+    final progress = (sensor.value - min) / (max - min);
+    // Only clamp the minimum to 0, allow values above 1.0
+    return progress < 0.0 ? 0.0 : progress;
+  }
+
   Widget _buildLiquidSensorCard({
     required IconData icon,
     required String label,
     required String value,
     required String unit,
     required double progress,
+    required int progressPercentage,
     required Color color,
   }) {
     return Container(
@@ -884,7 +909,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               builder: (context, child) {
                 return CustomPaint(
                   painter: LiquidFillPainter(
-                    progress: progress,
+                    progress: progress.clamp(0.0, 1.0), // Clamp for visual fill (0-100% fill)
                     color: color,
                     animationValue: _waveController.value,
                   ),
@@ -944,6 +969,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$progressPercentage%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: progressPercentage > 100 
+                          ? Colors.orange 
+                          : Theme.of(context).textTheme.bodySmall?.color,
+                    ),
                   ),
                 ],
               ),

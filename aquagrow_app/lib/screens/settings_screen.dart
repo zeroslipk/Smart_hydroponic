@@ -56,7 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) setState(() {});
   }
   
-  void _saveThresholdsToProvider() {
+  void _updateThresholdsInProvider({bool showMessage = false}) {
     final alertProvider = context.read<AlertProvider>();
     
     // Update temperature thresholds
@@ -83,14 +83,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       warningMax: waterMax - 5,
     ));
     
-    // Show success feedback
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Sensor thresholds updated successfully'),
-        backgroundColor: Color(0xFF7CB342),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    // Show success feedback only if requested (when user finishes dragging)
+    if (showMessage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sensor thresholds updated successfully'),
+          backgroundColor: Color(0xFF7CB342),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -393,7 +395,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 tempMin = min;
                 tempMax = max;
               });
-              _saveThresholdsToProvider();
+              _updateThresholdsInProvider(); // Update provider silently during dragging
+            },
+            onChangeEnd: (min, max) {
+              _updateThresholdsInProvider(showMessage: true); // Show message only when finished
             },
           ),
           const SizedBox(height: 24),
@@ -411,7 +416,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 phMin = min;
                 phMax = max;
               });
-              _saveThresholdsToProvider();
+              _updateThresholdsInProvider(); // Update provider silently during dragging
+            },
+            onChangeEnd: (min, max) {
+              _updateThresholdsInProvider(showMessage: true); // Show message only when finished
             },
           ),
           const SizedBox(height: 24),
@@ -429,7 +437,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 waterMin = min;
                 waterMax = max;
               });
-              _saveThresholdsToProvider();
+              _updateThresholdsInProvider(); // Update provider silently during dragging
+            },
+            onChangeEnd: (min, max) {
+              _updateThresholdsInProvider(showMessage: true); // Show message only when finished
             },
           ),
         ],
@@ -447,6 +458,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required double rangeMin,
     required double rangeMax,
     required Function(double, double) onChanged,
+    Function(double, double)? onChangeEnd,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,6 +516,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onChanged: (values) {
             onChanged(values.start, values.end);
           },
+          onChangeEnd: onChangeEnd != null ? (values) {
+            onChangeEnd(values.start, values.end);
+          } : null,
         ),
         // Visual zone indicator
         Container(

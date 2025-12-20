@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/sensor_provider.dart';
+import '../providers/alert_provider.dart';
+import '../models/sensor_reading.dart';
 import '../services/database_service.dart';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -148,20 +150,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                       return SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildPeriodSelector(),
-                            const SizedBox(height: 24),
-                            _buildHealthScore(provider),
-                            const SizedBox(height: 24),
-                            _buildParameterTrends(provider),
-                            const SizedBox(height: 24),
-                            _buildStatisticsSummary(provider),
-                            const SizedBox(height: 24),
-                            _buildExportOptions(),
-                            const SizedBox(height: 80),
-                          ],
+                        child: Consumer<AlertProvider>(
+                          builder: (context, alertProvider, child) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildPeriodSelector(),
+                                const SizedBox(height: 24),
+                                _buildHealthScore(provider, alertProvider),
+                                const SizedBox(height: 24),
+                                _buildParameterTrends(provider),
+                                const SizedBox(height: 24),
+                                _buildStatisticsSummary(provider),
+                                const SizedBox(height: 24),
+                                _buildExportOptions(),
+                                const SizedBox(height: 80),
+                              ],
+                            );
+                          },
                         ),
                       );
                     },
@@ -322,7 +328,26 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
   }
 
-  Widget _buildHealthScore(provider) {
+  /// Calculate progress using AlertProvider thresholds instead of Firebase min/max
+  /// Progress can exceed 1.0 (100%) when value exceeds max threshold
+  double _calculateProgressFromThresholds(SensorReading sensorReading, AlertProvider alertProvider) {
+    final thresholds = alertProvider.thresholds[sensorReading.id];
+    if (thresholds == null) {
+      // Fallback to Firebase min/max if no threshold found
+      return sensorReading.progress;
+    }
+    
+    final min = thresholds.criticalMin;
+    final max = thresholds.criticalMax;
+    
+    if (max == min) return 0.0;
+    // Allow progress to exceed 1.0 when value > max (e.g., value=42 with max=32 gives 1.3125 = 131.25%)
+    final progress = (sensorReading.value - min) / (max - min);
+    // Only clamp the minimum to 0, allow values above 1.0
+    return progress < 0.0 ? 0.0 : progress;
+  }
+
+  Widget _buildHealthScore(provider, AlertProvider alertProvider) {
     final sensors = provider.getAllSensors();
     if (sensors.isEmpty) {
       return const SizedBox();
@@ -426,7 +451,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               for (var sensor in sensors.take(4))
                 _buildScoreIndicator(
                   sensor.displayName.split(' ')[0],
-                  sensor.progress,
+                  _calculateProgressFromThresholds(sensor, alertProvider),
                   sensor.sensorColor,
                 ),
             ],
@@ -442,9 +467,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         CircularPercentIndicator(
           radius: 30,
           lineWidth: 6,
-          percent: value.clamp(0.0, 1.0),
+          percent: value.clamp(0.0, 1.0), // Clamp for visual indicator (0-100% fill)
           center: Text(
-            '${(value * 100).toInt()}',
+            '${(value * 100).toInt()}', // Show actual percentage (can be >100%)
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,

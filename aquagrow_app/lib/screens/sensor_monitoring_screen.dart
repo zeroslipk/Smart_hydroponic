@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:liquid_progress_indicator_v2/liquid_progress_indicator.dart';
 import 'package:provider/provider.dart';
 import '../providers/sensor_provider.dart';
+import '../providers/alert_provider.dart';
+import '../models/sensor_reading.dart';
 
 class SensorMonitoringScreen extends StatefulWidget {
   const SensorMonitoringScreen({super.key});
@@ -170,29 +172,36 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                         );
                       }
 
-                      // Display sensors
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: sensors.length,
-                        itemBuilder: (context, index) {
-                          final sensor = sensors[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 20),
-                            child: _buildLiquidSensorCard(
-                              SensorData(
-                                name: sensor.displayName,
-                                icon: sensor.icon,
-                                value: sensor.value,
-                                unit: sensor.unit,
-                                min: sensor.min,
-                                max: sensor.max,
-                                avg: sensor.value,
-                                color: sensor.sensorColor,
-                                optimal: sensor.status == 'optimal' || 
-                                        sensor.status == 'good',
-                              ),
-                            ),
+                      // Display sensors - wrap with Consumer to watch AlertProvider
+                      return Consumer<AlertProvider>(
+                        builder: (context, alertProvider, child) {
+                          return ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: sensors.length,
+                            itemBuilder: (context, index) {
+                              final sensor = sensors[index];
+                              // Calculate progress using AlertProvider thresholds
+                              final progress = _calculateProgressFromThresholds(sensor, alertProvider);
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 20),
+                                child: _buildLiquidSensorCard(
+                                  SensorData(
+                                    name: sensor.displayName,
+                                    icon: sensor.icon,
+                                    value: sensor.value,
+                                    unit: sensor.unit,
+                                    min: sensor.min,
+                                    max: sensor.max,
+                                    avg: sensor.value,
+                                    color: sensor.sensorColor,
+                                    optimal: sensor.status == 'optimal' || 
+                                            sensor.status == 'good',
+                                  ),
+                                  progress: progress,
+                                ),
+                              );
+                            },
                           );
                         },
                       );
@@ -335,8 +344,32 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
     );
   }
 
-  Widget _buildLiquidSensorCard(SensorData sensor) {
-    final progress = (sensor.value - sensor.min) / (sensor.max - sensor.min);
+  /// Calculate progress using AlertProvider thresholds instead of Firebase min/max
+  /// Progress can exceed 1.0 (100%) when value exceeds max threshold
+  double _calculateProgressFromThresholds(SensorReading sensorReading, AlertProvider alertProvider) {
+    final thresholds = alertProvider.thresholds[sensorReading.id];
+    if (thresholds == null) {
+      // Fallback to Firebase min/max if no threshold found
+      if (sensorReading.max == sensorReading.min) return 0.0;
+      final progress = (sensorReading.value - sensorReading.min) / (sensorReading.max - sensorReading.min);
+      return progress < 0.0 ? 0.0 : progress; // Only clamp minimum
+    }
+    
+    final min = thresholds.criticalMin;
+    final max = thresholds.criticalMax;
+    
+    if (max == min) return 0.0;
+    // Allow progress to exceed 1.0 when value > max (e.g., value=42 with max=32 gives 1.3125 = 131.25%)
+    final progress = (sensorReading.value - min) / (max - min);
+    // Only clamp the minimum to 0, allow values above 1.0
+    return progress < 0.0 ? 0.0 : progress;
+  }
+
+  Widget _buildLiquidSensorCard(SensorData sensor, {double? progress}) {
+    // Use provided progress or fallback to calculated progress from sensor min/max
+    final calculatedProgress = progress ?? (sensor.value - sensor.min) / (sensor.max - sensor.min);
+    // Only clamp minimum to 0, allow values above 1.0 for display (but UI components may need clamping for visual)
+    final finalProgress = calculatedProgress < 0.0 ? 0.0 : calculatedProgress;
 
     return Container(
       decoration: BoxDecoration(
@@ -511,7 +544,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                   width: 100,
                   height: 100,
                   child: LiquidCircularProgressIndicator(
-                    value: progress.clamp(0.0, 1.0),
+                    value: finalProgress.clamp(0.0, 1.0), // Clamp for visual indicator (0-100% fill)
                     valueColor: AlwaysStoppedAnimation(sensor.color),
                     backgroundColor: Theme.of(context).brightness == Brightness.dark 
                         ? Colors.grey[800]! 
@@ -520,7 +553,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                     borderWidth: 3.0,
                     direction: Axis.vertical,
                     center: Text(
-                      '${(progress * 100).toInt()}%',
+                      '${(finalProgress * 100).toInt()}%', // Show actual percentage (can be >100%)
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
