@@ -18,21 +18,21 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
       name: 'Water Pump',
       icon: Icons.water_drop,
       isActive: true,
-      color: Color(0xFF00BCD4),
+      color: const Color(0xFF00BCD4),
       runtime: '4h 23m',
     ),
     ActuatorData(
       name: 'LED Grow Lights',
       icon: Icons.lightbulb,
       isActive: true,
-      color: Color(0xFFFFA726),
+      color: const Color(0xFFFFA726),
       runtime: '12h 45m',
     ),
     ActuatorData(
       name: 'Cooling Fan',
       icon: Icons.air,
       isActive: false,
-      color: Color(0xFF66BB6A),
+      color: const Color(0xFF66BB6A),
       runtime: '0h 0m',
     ),
   ];
@@ -62,7 +62,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -115,7 +115,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
             onTap: () => Navigator.pop(context),
           ),
           const SizedBox(width: 16),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -184,7 +184,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -204,7 +204,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
             },
           ),
           // Title
-          Positioned(
+          const Positioned(
             top: 16,
             left: 20,
             child: Text(
@@ -225,7 +225,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Actuator Controls',
           style: TextStyle(
             fontSize: 20,
@@ -255,7 +255,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                 ? actuator.color.withValues(alpha: 0.2)
                 : Colors.black.withValues(alpha: 0.05),
             blurRadius: 20,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -337,7 +337,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                     children: [
                       Text(
                         actuator.name,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
@@ -351,7 +351,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                             height: 8,
                             decoration: BoxDecoration(
                               color: actuator.isActive
-                                  ? Color(0xFF7CB342)
+                                  ? const Color(0xFF7CB342)
                                   : Colors.grey,
                               shape: BoxShape.circle,
                             ),
@@ -359,17 +359,17 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                           const SizedBox(width: 6),
                           Text(
                             actuator.isActive ? 'Running' : 'Stopped',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               color: Colors.black54,
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Icon(Icons.access_time, size: 12, color: Colors.black54),
+                          const Icon(Icons.access_time, size: 12, color: Colors.black54),
                           const SizedBox(width: 4),
                           Text(
                             actuator.runtime,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               color: Colors.black54,
                             ),
@@ -401,7 +401,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                       color: actuator.isActive ? null : Colors.grey[300],
                     ),
                     child: AnimatedAlign(
-                      duration: Duration(milliseconds: 200),
+                      duration: const Duration(milliseconds: 200),
                       alignment: actuator.isActive
                           ? Alignment.centerRight
                           : Alignment.centerLeft,
@@ -409,7 +409,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                         width: 28,
                         height: 28,
                         margin: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
                           boxShadow: [
@@ -435,7 +435,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
             color: Colors.transparent,
             child: InkWell(
               onTap: () {},
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -469,7 +469,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Scheduled Tasks',
           style: TextStyle(
             fontSize: 20,
@@ -486,7 +486,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 20,
-                offset: Offset(0, 10),
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -497,29 +497,29 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                 title: 'Water Pump Schedule',
                 subtitle: 'Every 2 hours, 10 min duration',
                 isActive: true,
-                color: Color(0xFF00BCD4),
+                color: const Color(0xFF00BCD4),
               ),
-              Divider(height: 1),
+              const Divider(height: 1),
               _buildScheduleItem(
                 icon: Icons.lightbulb,
                 title: 'Lighting Schedule',
                 subtitle: '6:00 AM - 10:00 PM daily',
                 isActive: true,
-                color: Color(0xFFFFA726),
+                color: const Color(0xFFFFA726),
               ),
-              Divider(height: 1),
+              const Divider(height: 1),
               Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () {},
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+                  child: const Padding(
+                    padding: EdgeInsets.all(16),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.add_circle_outline, color: Color(0xFF00BCD4)),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Text(
                           'Add New Schedule',
                           style: TextStyle(
@@ -565,7 +565,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
@@ -574,7 +574,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.black54,
                   ),
@@ -596,7 +596,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Control History',
           style: TextStyle(
             fontSize: 20,
@@ -613,7 +613,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 20,
-                offset: Offset(0, 10),
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -624,23 +624,23 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                 title: 'Pump turned ON',
                 time: '2 hours ago',
                 type: 'Manual',
-                color: Color(0xFF00BCD4),
+                color: const Color(0xFF00BCD4),
               ),
-              Divider(height: 1),
+              const Divider(height: 1),
               _buildHistoryItem(
                 icon: Icons.lightbulb,
                 title: 'Lights turned OFF',
                 time: '5 hours ago',
                 type: 'Scheduled',
-                color: Color(0xFFFFA726),
+                color: const Color(0xFFFFA726),
               ),
-              Divider(height: 1),
+              const Divider(height: 1),
               _buildHistoryItem(
                 icon: Icons.air,
                 title: 'Fan turned ON',
                 time: '8 hours ago',
                 type: 'Auto',
-                color: Color(0xFF66BB6A),
+                color: const Color(0xFF66BB6A),
               ),
             ],
           ),
@@ -675,7 +675,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
@@ -684,7 +684,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                 const SizedBox(height: 2),
                 Text(
                   time,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.black54,
                   ),
@@ -700,7 +700,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
             ),
             child: Text(
               type,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 11,
                 color: Colors.black87,
                 fontWeight: FontWeight.w600,
@@ -717,15 +717,15 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
       width: double.infinity,
       height: 60,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [Color(0xFFFF5252), Color(0xFFD32F2F)],
         ),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFFFF5252).withValues(alpha: 0.5),
+            color: const Color(0xFFFF5252).withValues(alpha: 0.5),
             blurRadius: 20,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -739,11 +739,11 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
             );
           },
           borderRadius: BorderRadius.circular(30),
-          child: Row(
+          child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.stop_circle, color: Colors.white, size: 28),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Text(
                 'EMERGENCY STOP ALL',
                 style: TextStyle(
@@ -763,20 +763,20 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
   Widget _buildEmergencyDialog() {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Row(
+      title: const Row(
         children: [
           Icon(Icons.warning_amber_rounded, color: Color(0xFFFF5252), size: 28),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Text('Emergency Stop'),
         ],
       ),
-      content: Text(
+      content: const Text(
         'Are you sure you want to stop all actuators?\n\nThis will immediately halt all operations.',
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel'),
+          child: const Text('Cancel'),
         ),
         ElevatedButton(
           onPressed: () {
@@ -784,9 +784,9 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
             // Stop all actuators
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFFFF5252),
+            backgroundColor: const Color(0xFFFF5252),
           ),
-          child: Text('Stop All'),
+          child: const Text('Stop All'),
         ),
       ],
     );

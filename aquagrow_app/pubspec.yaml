@@ -40,15 +40,24 @@ dependencies:
   fl_chart: ^0.66.2
   
   # Firebase
-  firebase_core: ^2.24.2
-  firebase_database: ^10.4.0
+  firebase_core: ^4.2.1
+  firebase_auth: ^6.1.2
+  cloud_firestore: ^6.1.0
+  firebase_database: ^12.1.0
   
   # State management
   provider: ^6.1.1
   
   # Database
-  sqflite: ^2.3.0
-  path: ^1.8.3
+  sqflite: ^2.4.2
+  path: ^1.9.1
+  
+  # Quality Enhancement Features
+  flutter_tts: ^4.2.3
+  speech_to_text: ^7.3.0
+  flutter_local_notifications: ^19.5.0
+  path_provider: ^2.1.5
+  share_plus: ^12.0.1
 
 dev_dependencies:
   flutter_test:

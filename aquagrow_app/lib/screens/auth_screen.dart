@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:ui';
 import 'dart:math' as math;
+import '../services/auth_service.dart';
+import '../utils/validators.dart';
 import 'dashboard_screen.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -10,21 +13,25 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen>
-    with TickerProviderStateMixin {
+class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   bool isLogin = true;
   bool obscurePassword = true;
   late AnimationController _waveController;
   late AnimationController _rippleController;
-  
+
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
+  
+  // Validation error messages
+  String? _emailError;
+  String? _passwordError;
+  String? _nameError;
 
   @override
   void initState() {
     super.initState();
-    
+
     _waveController = AnimationController(
       duration: const Duration(seconds: 4),
       vsync: this,
@@ -36,6 +43,8 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
+  bool isLoading = false; // Add loading state
+
   @override
   void dispose() {
     _waveController.dispose();
@@ -44,6 +53,228 @@ class _AuthScreenState extends State<AuthScreen>
     passwordController.dispose();
     nameController.dispose();
     super.dispose();
+  }
+
+  // Validate all fields
+  bool _validateFields() {
+    setState(() {
+      _emailError = Validators.validateEmail(emailController.text);
+      _passwordError = isLogin 
+          ? Validators.validatePassword(passwordController.text)
+          : Validators.validateStrongPassword(passwordController.text);
+      _nameError = isLogin ? null : Validators.validateName(nameController.text);
+    });
+    
+    return _emailError == null && 
+           _passwordError == null && 
+           (isLogin || _nameError == null);
+  }
+
+  // Auth logic
+  Future<void> _handleAuth() async {
+    if (!_validateFields()) {
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      if (isLogin) {
+        await AuthService().signIn(
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
+        );
+      } else {
+        await AuthService().signUp(
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
+          name: nameController.text.trim(),
+        );
+      }
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        String message = e.message ?? 'Authentication failed';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('An error occurred: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Password reset
+  Future<void> _handleForgotPassword() async {
+    final resetEmailController = TextEditingController(
+      text: emailController.text.trim(),
+    );
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF006064),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Title
+              const Text(
+                'Reset Password',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Enter your email address and we\'ll send you a link to reset your password.',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Email field
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white.withValues(alpha: 0.1),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: TextField(
+                  controller: resetEmailController,
+                  keyboardType: TextInputType.emailAddress,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    labelStyle: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.email_outlined,
+                      color: Color(0xFF00BCD4),
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.all(16),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Send button
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final email = resetEmailController.text.trim();
+                    final emailError = Validators.validateEmail(email);
+                    
+                    if (emailError != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(emailError),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+                    
+                    try {
+                      await AuthService().sendPasswordResetEmail(email);
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Password reset email sent to $email',
+                            ),
+                            backgroundColor: const Color(0xFF7CB342),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00BCD4),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                  ),
+                  child: const Text(
+                    'Send Reset Link',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -67,7 +298,13 @@ class _AuthScreenState extends State<AuthScreen>
             },
           ),
 
-          // Main// ... continuing from where we left off in auth_screen.dart
+          if (isLoading)
+            Container(
+              color: Colors.black.withValues(alpha: 0.5),
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.cyan),
+              ),
+            ),
 
           // Main content with glassmorphism
           SafeArea(
@@ -159,6 +396,12 @@ class _AuthScreenState extends State<AuthScreen>
                             controller: nameController,
                             label: 'Full Name',
                             icon: Icons.person_outline,
+                            errorText: _nameError,
+                            onChanged: (_) {
+                              if (_nameError != null) {
+                                setState(() => _nameError = null);
+                              }
+                            },
                           ),
                           const SizedBox(height: 20),
                         ],
@@ -167,13 +410,25 @@ class _AuthScreenState extends State<AuthScreen>
                           label: 'Email',
                           icon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
+                          errorText: _emailError,
+                          onChanged: (_) {
+                            if (_emailError != null) {
+                              setState(() => _emailError = null);
+                            }
+                          },
                         ),
                         const SizedBox(height: 20),
                         _buildLiquidTextField(
                           controller: passwordController,
-                          label: 'Password',
+                          label: isLogin ? 'Password' : 'Password (min 8 chars, 1 upper, 1 number)',
                           icon: Icons.lock_outline,
                           obscureText: obscurePassword,
+                          errorText: _passwordError,
+                          onChanged: (_) {
+                            if (_passwordError != null) {
+                              setState(() => _passwordError = null);
+                            }
+                          },
                           suffixIcon: IconButton(
                             icon: Icon(
                               obscurePassword
@@ -193,8 +448,8 @@ class _AuthScreenState extends State<AuthScreen>
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: () {},
-                              child: Text(
+                              onPressed: _handleForgotPassword,
+                              child: const Text(
                                 'Forgot Password?',
                                 style: TextStyle(
                                   color: Color(0xFF00BCD4),
@@ -212,15 +467,7 @@ class _AuthScreenState extends State<AuthScreen>
 
                   // Liquid button
                   _buildLiquidButton(
-                    onPressed: () {
-                      // Navigate to dashboard
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const DashboardScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: _handleAuth,
                     text: isLogin ? 'Sign In' : 'Create Account',
                   ),
 
@@ -355,11 +602,7 @@ class _AuthScreenState extends State<AuthScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF006064),
-                Color(0xFF00838F),
-                Color(0xFF00ACC1),
-              ],
+              colors: [Color(0xFF006064), Color(0xFF00838F), Color(0xFF00ACC1)],
               stops: [
                 0.0,
                 0.5 + (math.sin(_waveController.value * 2 * math.pi) * 0.2),
@@ -414,35 +657,67 @@ class _AuthScreenState extends State<AuthScreen>
     bool obscureText = false,
     TextInputType? keyboardType,
     Widget? suffixIcon,
+    String? errorText,
+    Function(String)? onChanged,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.1),
-            Colors.white.withValues(alpha: 0.05),
-          ],
+    final hasError = errorText != null;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              colors: [
+                Colors.white.withValues(alpha: 0.1),
+                Colors.white.withValues(alpha: 0.05),
+              ],
+            ),
+            border: Border.all(
+              color: hasError 
+                  ? Colors.red.withValues(alpha: 0.8)
+                  : Colors.white.withValues(alpha: 0.3),
+              width: hasError ? 2 : 1,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            style: const TextStyle(color: Colors.white),
+            onChanged: onChanged,
+            decoration: InputDecoration(
+              labelText: label,
+              labelStyle: TextStyle(
+                color: hasError 
+                    ? Colors.red.shade200
+                    : Colors.white.withValues(alpha: 0.7),
+              ),
+              prefixIcon: Icon(
+                icon, 
+                color: hasError ? Colors.red.shade300 : const Color(0xFF00BCD4),
+              ),
+              suffixIcon: suffixIcon,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.all(16),
+            ),
+          ),
         ),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-          prefixIcon: Icon(icon, color: Color(0xFF00BCD4)),
-          suffixIcon: suffixIcon,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.all(16),
-        ),
-      ),
+        if (hasError) ...[
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Text(
+              errorText,
+              style: TextStyle(
+                color: Colors.red.shade200,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -461,11 +736,7 @@ class _AuthScreenState extends State<AuthScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF00BCD4),
-                Color(0xFF00838F),
-                Color(0xFF006064),
-              ],
+              colors: [Color(0xFF00BCD4), Color(0xFF00838F), Color(0xFF006064)],
               stops: [
                 0.0,
                 0.5 + (math.sin(_waveController.value * 2 * math.pi) * 0.3),
@@ -518,8 +789,7 @@ class FloatingBubblesPainter extends CustomPainter {
     // Draw 5 floating bubbles
     for (int i = 0; i < 5; i++) {
       final x = size.width * (0.1 + i * 0.2);
-      final y = size.height *
-          ((0.2 + i * 0.15 + animationValue) % 1.2);
+      final y = size.height * ((0.2 + i * 0.15 + animationValue) % 1.2);
       final radius = 20.0 + (i * 5);
 
       canvas.drawCircle(Offset(x, y), radius, paint);
@@ -529,4 +799,3 @@ class FloatingBubblesPainter extends CustomPainter {
   @override
   bool shouldRepaint(FloatingBubblesPainter oldDelegate) => true;
 }
-

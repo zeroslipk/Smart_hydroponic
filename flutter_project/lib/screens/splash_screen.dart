@@ -96,7 +96,7 @@ class _SplashScreenState extends State<SplashScreen>
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
+                    colors: const [
                       Color(0xFF006064),
                       Color(0xFF00838F),
                       Color(0xFF00ACC1),
@@ -166,7 +166,7 @@ class _SplashScreenState extends State<SplashScreen>
                         return LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
+                          colors: const [
                             Colors.white,
                             Color(0xFF00BCD4),
                             Colors.white,
@@ -281,11 +281,11 @@ class _SplashScreenState extends State<SplashScreen>
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Color(0xFF00BCD4).withValues(alpha: 0.8),
-                Color(0xFF00838F).withValues(alpha: 0.8),
+                const Color(0xFF00BCD4).withValues(alpha: 0.8),
+                const Color(0xFF00838F).withValues(alpha: 0.8),
               ],
             ),
-            borderRadius: BorderRadius.vertical(
+            borderRadius: const BorderRadius.vertical(
               top: Radius.circular(40),
               bottom: Radius.circular(40),
             ),
@@ -299,7 +299,7 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ),
         // Plant inside droplet
-        Icon(
+        const Icon(
           Icons.eco,
           size: 50,
           color: Color(0xFF7CB342),

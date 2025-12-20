@@ -25,7 +25,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
       min: 22.0,
       max: 28.0,
       avg: 25.2,
-      color: Color(0xFFFF5252),
+      color: const Color(0xFFFF5252),
       optimal: true,
     ),
     SensorData(
@@ -36,7 +36,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
       min: 45,
       max: 100,
       avg: 78,
-      color: Color(0xFF00BCD4),
+      color: const Color(0xFF00BCD4),
       optimal: true,
     ),
     SensorData(
@@ -47,7 +47,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
       min: 5.8,
       max: 6.8,
       avg: 6.3,
-      color: Color(0xFF9C27B0),
+      color: const Color(0xFF9C27B0),
       optimal: true,
     ),
     SensorData(
@@ -58,7 +58,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
       min: 800,
       max: 1500,
       avg: 1150,
-      color: Color(0xFFFF9800),
+      color: const Color(0xFFFF9800),
       optimal: true,
     ),
     SensorData(
@@ -69,7 +69,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
       min: 200,
       max: 800,
       avg: 520,
-      color: Color(0xFFFFC107),
+      color: const Color(0xFFFFC107),
       optimal: true,
     ),
   ];
@@ -99,7 +99,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -117,9 +117,9 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
-                    await Future.delayed(Duration(seconds: 1));
+                    await Future.delayed(const Duration(seconds: 1));
                   },
-                  color: Color(0xFF00BCD4),
+                  color: const Color(0xFF00BCD4),
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
                     physics: const BouncingScrollPhysics(),
@@ -150,7 +150,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
             onTap: () => Navigator.pop(context),
           ),
           const SizedBox(width: 16),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -244,7 +244,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                   size: 18,
                 ),
                 const SizedBox(width: 6),
-                Text(
+                const Text(
                   'Auto',
                   style: TextStyle(
                     color: Colors.white,
@@ -271,7 +271,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
           BoxShadow(
             color: sensor.color.withValues(alpha: 0.2),
             blurRadius: 20,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -287,7 +287,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                   sensor.color.withValues(alpha: 0.05),
                 ],
               ),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Row(
               children: [
@@ -312,7 +312,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                     children: [
                       Text(
                         sensor.name,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
@@ -328,11 +328,11 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                                 width: 8,
                                 height: 8,
                                 decoration: BoxDecoration(
-                                  color: Color(0xFF7CB342),
+                                  color: const Color(0xFF7CB342),
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Color(0xFF7CB342).withValues(
+                                      color: const Color(0xFF7CB342).withValues(
                                         alpha: _pulseController.value,
                                       ),
                                       blurRadius: 8 * _pulseController.value,
@@ -344,7 +344,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                             },
                           ),
                           const SizedBox(width: 8),
-                          Text(
+                          const Text(
                             'Live Data',
                             style: TextStyle(
                               fontSize: 12,
@@ -363,16 +363,16 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                   ),
                   decoration: BoxDecoration(
                     color: sensor.optimal
-                        ? Color(0xFF7CB342).withValues(alpha: 0.1)
-                        : Color(0xFFFF5252).withValues(alpha: 0.1),
+                        ? const Color(0xFF7CB342).withValues(alpha: 0.1)
+                        : const Color(0xFFFF5252).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     sensor.optimal ? 'Optimal' : 'Warning',
                     style: TextStyle(
                       color: sensor.optimal
-                          ? Color(0xFF7CB342)
-                          : Color(0xFFFF5252),
+                          ? const Color(0xFF7CB342)
+                          : const Color(0xFFFF5252),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -392,7 +392,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Current Reading',
                         style: TextStyle(
                           fontSize: 12,
@@ -405,7 +405,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                         children: [
                           Text(
                             sensor.value.toString(),
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 42,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
@@ -416,7 +416,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                             padding: const EdgeInsets.only(bottom: 10),
                             child: Text(
                               sensor.unit,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 18,
                                 color: Colors.black54,
                               ),
@@ -441,7 +441,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                     direction: Axis.vertical,
                     center: Text(
                       '${(progress * 100).toInt()}%',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
@@ -536,7 +536,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             color: Colors.black54,
           ),
@@ -544,7 +544,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
         const SizedBox(height: 6),
         Text(
           '$value$unit',
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
@@ -631,7 +631,7 @@ class MiniChartPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final path = Path();
-    final points = 20;
+    const points = 20;
 
     for (int i = 0; i < points; i++) {
       final x = (size.width / points) * i;

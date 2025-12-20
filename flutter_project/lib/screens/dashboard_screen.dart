@@ -1001,7 +1001,7 @@ class FlowLinesPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final path = Path();
-    final waveHeight = 20.0;
+    const waveHeight = 20.0;
     final waveLength = size.width / 3;
 
     path.moveTo(0, size.height / 2);
@@ -1049,7 +1049,7 @@ class LiquidFillPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final path = Path();
-    final waveHeight = 8.0;
+    const waveHeight = 8.0;
     final baseY = size.height * (1 - progress);
 
     path.moveTo(0, size.height);

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:math' as math;
+import 'dart:io';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/sensor_provider.dart';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -820,12 +823,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           icon: Icons.table_chart,
           label: 'Export as CSV',
           color: const Color(0xFF00BCD4),
+          onTap: _exportAsCSV,
         ),
         const SizedBox(height: 12),
         _buildExportButton(
           icon: Icons.picture_as_pdf,
           label: 'Export as PDF Report',
           color: const Color(0xFFFF5252),
+          onTap: _exportAsPDF,
         ),
       ],
     );
@@ -835,6 +840,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     required IconData icon,
     required String label,
     required Color color,
+    required VoidCallback onTap,
   }) {
     return Container(
       width: double.infinity,
@@ -855,14 +861,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('$label feature coming soon!'),
-                backgroundColor: color,
-              ),
-            );
-          },
+          onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -883,6 +882,143 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       ),
     );
   }
+  
+  Future<void> _exportAsCSV() async {
+    final provider = context.read<SensorProvider>();
+    final sensors = provider.getAllSensors();
+    
+    if (sensors.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No data to export'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+    
+    try {
+      // Build CSV content
+      final buffer = StringBuffer();
+      buffer.writeln('Sensor,Value,Unit,Status,Min,Max,Timestamp');
+      
+      for (final sensor in sensors) {
+        buffer.writeln('${sensor.displayName},${sensor.value},${sensor.unit},${sensor.status},${sensor.min},${sensor.max},${DateTime.now().toIso8601String()}');
+      }
+      
+      // Get directory for saving
+      final directory = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
+      final fileName = 'aquagrow_sensors_$timestamp.csv';
+      final file = File('${directory.path}/$fileName');
+      
+      // Write to file
+      await file.writeAsString(buffer.toString());
+      
+      // Share the file (using deprecated but functional API)
+      // ignore: deprecated_member_use
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'AquaGrow Sensor Data Export',
+        subject: 'Sensor Data CSV',
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('CSV file saved: $fileName'),
+            backgroundColor: const Color(0xFF7CB342),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting CSV: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+  
+  Future<void> _exportAsPDF() async {
+    final provider = context.read<SensorProvider>();
+    final sensors = provider.getAllSensors();
+    
+    try {
+      // Build PDF-like report content (formatted text file)
+      final buffer = StringBuffer();
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      buffer.writeln('           AQUAGROW SENSOR DATA REPORT');
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      buffer.writeln('');
+      buffer.writeln('Generated: ${DateTime.now().toString().substring(0, 19)}');
+      buffer.writeln('Period: $selectedPeriod');
+      buffer.writeln('Total Sensors: ${sensors.length}');
+      buffer.writeln('');
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      buffer.writeln('SENSOR READINGS');
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      buffer.writeln('');
+      
+      for (final sensor in sensors) {
+        buffer.writeln(sensor.displayName.toUpperCase());
+        buffer.writeln('  Value: ${sensor.displayValue}${sensor.unit}');
+        buffer.writeln('  Status: ${sensor.status.toUpperCase()}');
+        buffer.writeln('  Range: ${sensor.min} - ${sensor.max}${sensor.unit}');
+        buffer.writeln('');
+      }
+      
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      buffer.writeln('END OF REPORT');
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      
+      // Get directory for saving
+      final directory = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
+      final fileName = 'aquagrow_report_$timestamp.txt';
+      final file = File('${directory.path}/$fileName');
+      
+      // Write to file
+      await file.writeAsString(buffer.toString());
+      
+      // Share the file (using deprecated but functional API)
+      // ignore: deprecated_member_use
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'AquaGrow Sensor Report',
+        subject: 'Sensor Data Report',
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Report saved: $fileName'),
+            backgroundColor: const Color(0xFF7CB342),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generating report: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+  
 }
 
 class WaveCirclePainter extends CustomPainter {

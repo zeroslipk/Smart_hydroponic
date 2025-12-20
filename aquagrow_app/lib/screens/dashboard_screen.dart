@@ -3,6 +3,10 @@ import 'dart:ui';
 import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import '../providers/sensor_provider.dart';
+import '../providers/alert_provider.dart';
+import '../services/voice_service.dart';
+import '../services/firebase_service.dart';
+import '../widgets/voice_button.dart';
 import 'sensor_monitoring_screen.dart';
 import 'control_panel_screen.dart';
 import 'analytics_screen.dart';
@@ -22,6 +26,17 @@ class _DashboardScreenState extends State<DashboardScreen>
   final int _selectedIndex = 0;
   late AnimationController _pulseController;
   late AnimationController _waveController;
+  
+  // Voice
+  final VoiceService _voiceService = VoiceService();
+  final FirebaseService _firebaseService = FirebaseService();
+  bool _isListening = false;
+  String _recognizedText = '';
+  
+  // Actuator states for quick controls
+  bool _pumpState = false;
+  bool _lightsState = false;
+  bool _fanState = false;
 
   @override
   void initState() {
@@ -35,6 +50,192 @@ class _DashboardScreenState extends State<DashboardScreen>
       duration: const Duration(seconds: 3),
       vsync: this,
     )..repeat();
+    
+    _initVoice();
+    _loadActuatorStates();
+    _loadSystemMode();
+  }
+  
+  Future<void> _loadSystemMode() async {
+    try {
+      final mode = await _firebaseService.getSystemMode();
+      if (mounted && mode != null) {
+        setState(() {
+          isAutoMode = mode;
+        });
+      }
+    } catch (e) {
+      debugPrint('DashboardScreen: Error loading system mode: $e');
+    }
+  }
+  
+  Future<void> _loadActuatorStates() async {
+    try {
+      final states = await _firebaseService.getAllActuatorStates();
+      if (mounted) {
+        setState(() {
+          _pumpState = states['pump'] ?? false;
+          _lightsState = states['lights'] ?? false;
+          _fanState = states['fan'] ?? false;
+        });
+      }
+    } catch (e) {
+      debugPrint('DashboardScreen: Error loading actuator states: $e');
+    }
+  }
+  
+  Future<void> _toggleQuickActuator(String actuatorId, bool currentState) async {
+    try {
+      final newState = !currentState;
+      debugPrint('DashboardScreen: Toggling $actuatorId from $currentState to $newState');
+      
+      // Update local state immediately for UI responsiveness
+      if (mounted) {
+        setState(() {
+          switch (actuatorId) {
+            case 'pump':
+              _pumpState = newState;
+              break;
+            case 'lights':
+              _lightsState = newState;
+              break;
+            case 'fan':
+              _fanState = newState;
+              break;
+          }
+        });
+      }
+      
+      // Send to Firebase
+      await _firebaseService.setActuatorState(actuatorId, newState);
+      debugPrint('DashboardScreen: Successfully toggled $actuatorId to $newState');
+    } catch (e) {
+      debugPrint('DashboardScreen: Error toggling actuator $actuatorId: $e');
+      // Revert on error
+      if (mounted) {
+        setState(() {
+          switch (actuatorId) {
+            case 'pump':
+              _pumpState = currentState;
+              break;
+            case 'lights':
+              _lightsState = currentState;
+              break;
+            case 'fan':
+              _fanState = currentState;
+              break;
+          }
+        });
+      }
+    }
+  }
+  
+  void _initVoice() {
+    _voiceService.initialize();
+    
+    _voiceService.onListeningChanged = (isListening) {
+      if (mounted) setState(() => _isListening = isListening);
+    };
+    
+    _voiceService.onWordsRecognized = (text) {
+      if (mounted) setState(() => _recognizedText = text);
+    };
+    
+    _voiceService.onCommandRecognized = (command, text) {
+      _handleVoiceCommand(command);
+    };
+    
+    _voiceService.onActuatorCommand = (actuatorId, turnOn) async {
+      try {
+        await _firebaseService.setActuatorState(actuatorId, turnOn);
+        debugPrint('Voice command: Actuator $actuatorId set to ${turnOn ? "ON" : "OFF"} via Firebase');
+        
+        // Update local state immediately to reflect the change in quick controls
+        if (mounted) {
+          setState(() {
+            switch (actuatorId) {
+              case 'pump':
+                _pumpState = turnOn;
+                break;
+              case 'lights':
+                _lightsState = turnOn;
+                break;
+              case 'fan':
+                _fanState = turnOn;
+                break;
+            }
+          });
+        }
+        
+        // Also reload states from Firebase after a short delay to ensure sync
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _loadActuatorStates();
+          }
+        });
+      } catch (e) {
+        debugPrint('Error sending voice actuator command: $e');
+      }
+    };
+  }
+  
+  void _handleVoiceCommand(VoiceCommand command) {
+    final sensorProvider = context.read<SensorProvider>();
+    final alertProvider = context.read<AlertProvider>();
+    
+    switch (command) {
+      case VoiceCommand.status:
+        _voiceService.speakSystemStatus(sensorProvider.getAllSensors());
+        break;
+      case VoiceCommand.temperature:
+        if (sensorProvider.temperature != null) {
+          _voiceService.speakSensor(sensorProvider.temperature!);
+        }
+        break;
+      case VoiceCommand.waterLevel:
+        if (sensorProvider.waterLevel != null) {
+          _voiceService.speakSensor(sensorProvider.waterLevel!);
+        }
+        break;
+      case VoiceCommand.pH:
+        if (sensorProvider.pH != null) {
+          _voiceService.speakSensor(sensorProvider.pH!);
+        }
+        break;
+      case VoiceCommand.tds:
+        if (sensorProvider.tds != null) {
+          _voiceService.speakSensor(sensorProvider.tds!);
+        }
+        break;
+      case VoiceCommand.light:
+        if (sensorProvider.light != null) {
+          _voiceService.speakSensor(sensorProvider.light!);
+        }
+        break;
+      case VoiceCommand.alerts:
+        // Speak alerts summary and navigate to alerts screen
+        _voiceService.speakAlertsSummary(alertProvider.alerts);
+        // Navigate to alerts screen after TTS starts
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted && context.mounted) {
+            try {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AlertsScreen()),
+              ).then((_) {
+                if (mounted) {
+                  alertProvider.refresh();
+                }
+              });
+            } catch (e) {
+              debugPrint('DashboardScreen: Error navigating to alerts: $e');
+            }
+          }
+        });
+        break;
+      default:
+        break;
+    }
   }
 
   @override
@@ -99,6 +300,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: RefreshIndicator(
                     onRefresh: () async {
                       await context.read<SensorProvider>().refresh();
+                      await _loadActuatorStates();
                     },
                     color: const Color(0xFF00BCD4),
                     child: SingleChildScrollView(
@@ -121,6 +323,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 ),
               ],
+            ),
+          ),
+          
+          // Voice button overlay
+          Positioned(
+            right: 16,
+            bottom: 100,
+            child: VoiceButton(
+              isListening: _isListening,
+              recognizedText: _recognizedText,
+              onPressed: () => _voiceService.toggleListening(),
+              onLongPress: () {
+                // Read full status on long press
+                final sensors = context.read<SensorProvider>().getAllSensors();
+                _voiceService.speakSystemStatus(sensors);
+              },
             ),
           ),
         ],
@@ -157,13 +375,18 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
           Row(
             children: [
-              _buildGlassIconButton(
-                icon: Icons.notifications_outlined,
-                badge: '3',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AlertsScreen()),
+              Consumer<AlertProvider>(
+                builder: (context, alertProvider, child) {
+                  final count = alertProvider.unreadCount;
+                  return _buildGlassIconButton(
+                    icon: Icons.notifications_outlined,
+                    badge: count > 0 ? (count > 9 ? '9+' : count.toString()) : null,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AlertsScreen()),
+                      ).then((_) => alertProvider.refresh());
+                    },
                   );
                 },
               ),
@@ -321,6 +544,31 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 Row(
                   children: [
+                    // Speaker button for TTS
+                    GestureDetector(
+                      onTap: () async {
+                        try {
+                          final sensors = context.read<SensorProvider>().getAllSensors();
+                          await _voiceService.speakSystemStatus(sensors);
+                          debugPrint('DashboardScreen: TTS triggered via speaker button');
+                        } catch (e) {
+                          debugPrint('DashboardScreen: Error with speaker button TTS: $e');
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.volume_up,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Text(
                       isAutoMode ? 'Auto' : 'Manual',
                       style: const TextStyle(
@@ -330,10 +578,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                     const SizedBox(width: 8),
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
+                        final newMode = !isAutoMode;
                         setState(() {
-                          isAutoMode = !isAutoMode;
+                          isAutoMode = newMode;
                         });
+                        // Save to Firebase
+                        try {
+                          await _firebaseService.setSystemMode(newMode);
+                        } catch (e) {
+                          debugPrint('DashboardScreen: Error saving system mode: $e');
+                        }
                       },
                       child: Container(
                         width: 50,
@@ -728,20 +983,23 @@ class _DashboardScreenState extends State<DashboardScreen>
               _buildBlobActionButton(
                 icon: Icons.water_drop,
                 label: 'Pump',
-                isActive: true,
+                isActive: _pumpState,
                 color: const Color(0xFF00BCD4),
+                onTap: () => _toggleQuickActuator('pump', _pumpState),
               ),
               _buildBlobActionButton(
                 icon: Icons.lightbulb_outline,
                 label: 'Lights',
-                isActive: true,
+                isActive: _lightsState,
                 color: const Color(0xFFFFA726),
+                onTap: () => _toggleQuickActuator('lights', _lightsState),
               ),
               _buildBlobActionButton(
                 icon: Icons.air,
                 label: 'Fan',
-                isActive: false,
-                color: Colors.grey,
+                isActive: _fanState,
+                color: const Color(0xFF66BB6A),
+                onTap: () => _toggleQuickActuator('fan', _fanState),
               ),
             ],
           ),
@@ -755,9 +1013,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     required String label,
     required bool isActive,
     required Color color,
+    required VoidCallback onTap,
   }) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onTap,
       child: Column(
         children: [
           AnimatedContainer(
@@ -824,30 +1083,93 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               TextButton(
                 onPressed: () {
+                  final alertProvider = context.read<AlertProvider>();
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const AlertsScreen()),
-                  );
+                  ).then((_) => alertProvider.refresh());
                 },
                 child: const Text('View All'),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _buildAlertBubble(
-            icon: Icons.warning_amber_rounded,
-            title: 'Temperature Rising',
-            subtitle: '28°C detected',
-            time: '2h ago',
-            color: const Color(0xFFFFA726),
-          ),
-          const SizedBox(height: 12),
-          _buildAlertBubble(
-            icon: Icons.info_outline,
-            title: 'Pump Scheduled',
-            subtitle: 'Next cycle in 30 minutes',
-            time: '5h ago',
-            color: const Color(0xFF00BCD4),
+          Consumer<AlertProvider>(
+            builder: (context, alertProvider, child) {
+              final alerts = alertProvider.alerts.take(3).toList();
+              
+              if (alerts.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7CB342).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_circle_outline,
+                          color: Color(0xFF7CB342),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'All Clear',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'No alerts at the moment',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              
+              return Column(
+                children: alerts.map((alert) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildAlertBubble(
+                      icon: alert.icon,
+                      title: alert.title,
+                      subtitle: alert.message,
+                      time: alert.timeAgo,
+                      color: alert.color,
+                    ),
+                  );
+                }).toList(),
+              );
+            },
           ),
         ],
       ),
