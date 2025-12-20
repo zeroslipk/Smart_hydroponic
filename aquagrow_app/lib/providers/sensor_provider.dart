@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/sensor_reading.dart';
 import '../services/firebase_service.dart';
+import '../services/database_service.dart';
 import 'dart:async';
 
 class SensorProvider with ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
+  final DatabaseService _databaseService = DatabaseService();
   
   Map<String, SensorReading> _sensors = {};
   bool _isLoading = true;
@@ -49,11 +51,15 @@ class SensorProvider with ChangeNotifier {
     _sensorSubscription = _firebaseService
         .streamAllSensors()
         .listen(
-          (data) {
+          (data) async {
             _sensors = data;
             _isLoading = false;
             _lastUpdate = DateTime.now();
             _error = null;
+            
+            // Save to SQLite database
+            await _saveSensorReadingsToDatabase(data);
+            
             notifyListeners();
           },
           onError: (error) {
@@ -62,6 +68,44 @@ class SensorProvider with ChangeNotifier {
             notifyListeners();
           },
         );
+    
+    // Load cached data from SQLite if Firebase is not connected
+    _loadCachedSensorReadings();
+  }
+
+  /// Save sensor readings to SQLite database
+  Future<void> _saveSensorReadingsToDatabase(Map<String, SensorReading> sensors) async {
+    try {
+      for (var reading in sensors.values) {
+        await _databaseService.insertSensorReading(reading);
+      }
+    } catch (e) {
+      debugPrint('Error saving sensor readings to database: $e');
+    }
+  }
+
+  /// Load cached sensor readings from SQLite
+  Future<void> _loadCachedSensorReadings() async {
+    try {
+      // Load latest readings for each sensor type
+      final sensorTypes = ['temperature', 'waterLevel', 'pH', 'tds', 'light'];
+      Map<String, SensorReading> cachedSensors = {};
+      
+      for (var sensorId in sensorTypes) {
+        final reading = await _databaseService.getLatestSensorReading(sensorId);
+        if (reading != null) {
+          cachedSensors[sensorId] = reading;
+        }
+      }
+      
+      if (cachedSensors.isNotEmpty && _sensors.isEmpty) {
+        _sensors = cachedSensors;
+        _isLoading = false;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading cached sensor readings: $e');
+    }
   }
 
   // Get specific sensor
@@ -81,7 +125,30 @@ class SensorProvider with ChangeNotifier {
   Future<void> refresh() async {
     _isLoading = true;
     notifyListeners();
+    
+    // Try to load from cache if Firebase is not connected
+    if (!_isConnected) {
+      await _loadCachedSensorReadings();
+    }
+    
     await Future.delayed(const Duration(milliseconds: 500));
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // Get historical sensor readings from database
+  Future<List<SensorReading>> getHistoricalReadings(
+    String sensorId, {
+    DateTime? startDate,
+    DateTime? endDate,
+    int? limit,
+  }) async {
+    return await _databaseService.getSensorReadings(
+      sensorId,
+      startDate: startDate,
+      endDate: endDate,
+      limit: limit,
+    );
   }
 
   @override
