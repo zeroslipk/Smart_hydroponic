@@ -1,61 +1,57 @@
-# AquaGrow - Smart Hydroponic System
+# HydroPulse - Smart Hydroponic System
 
-**Student Name:** Youssef
-**Project:** Smart Hydroponic Monitoring & Control App
+## Overview
+**HydroPulse** (formerly AquaGrow) is a comprehensive mobile application for monitoring and controlling smart hydroponic systems. It integrates real-time sensor data, remote actuator control, and intelligent alerts to ensure optimal plant growth.
 
-## 📱 Project Overview
-AquaGrow is a Flutter-based mobile application designed to monitor and control a hydroponic farming system. It integrates with **Firebase Realtime Database** for sensor data (pH, TDS, Temperature, Water Level) and **SQLite** for local logging and offline alerts.
+## Features
 
-### 🌟 Key Features
-- **Real-time Monitoring:** Live dashboard for vital hydroponic sensors.
-- **Control Panel:** Manual and scheduled control for Pump, Lights, and Fans.
-- **Voice Commands:** Full voice control for checking status and toggling devices.
-- **Alert System:** Local notifications for critical sensor thresholds.
-- **Analytics:** Charts and historical data visualization.
-- **Offline Support:** Local caching of sensor readings and logs.
+### 🖥️ UI & UX
+*   **Modern Dashboard**: Real-time visualization of sensors (pH, Temperature, Water Level).
+*   **Dark Mode**: Fully supported, dynamic dark mode for all screens.
+*   **Liquid Animations**: Custom "blob" and "wave" animations for a premium feel.
+*   **Rebranding**: Fresh "HydroPulse" identity with custom assets.
 
----
+### 🔥 Mobile Tech
+*   **Firebase Integration**: Real-time database for syncing sensor readings and actuator states.
+*   **Hardware Control**: Toggle Pumps, Lights, and Fans directly from the app.
+*   **Notifications**: Local push notifications for critical alerts (e.g., "Water Level Critical").
 
-## 🛠️ Setup & Installation
-1.  **Prerequisites:**
-    - Flutter SDK (3.x+)
-    - Android Studio with Emulator or Physical Device
-    - Firebase Project Configured (`google-services.json`)
+### 💾 Data & Logic
+*   **SQLite Database**: Local storage for logs, history, and offline capabilities.
+*   **MVVM Architecture**: Clean separation of UI (Screens) and Logic (ViewModels).
+*   **Validation**: Robust input validation for all forms (Auth, Settings).
 
-2.  **Installation:**
+### 🤖 Smart Features
+*   **Text-to-Speech (TTS)**: Voice announcements for system status.
+*   **Speech Recognition**: Voice command support (experimental).
+
+## Tech Stack
+*   **Framework**: Flutter (Dart)
+*   **Backend**: Firebase (Auth, Realtime Database)
+*   **Local DB**: SQLite (`sqflite`)
+*   **State Management**: `Provider`
+
+## Testing
+Comprehensive testing suite covering all layers:
+*   **Unit Tests**: Business logic and parsing.
+*   **Widget Tests**: UI rendering and interactions.
+*   **Integration Tests**: Full end-to-end user flows on physical devices.
+
+See [TESTING.md](TESTING.md) for detailed regression test cases.
+
+## Setup & Running
+
+1.  **Install Dependencies**:
     ```bash
-    # Clone the repo
-    git clone https://github.com/zeroslipk/Smart_hydroponic.git
-    cd aquagrow_app
-
-    # Install dependencies
     flutter pub get
     ```
 
-3.  **Running the App:**
+2.  **Run Application**:
     ```bash
     flutter run
     ```
 
-4.  **Running Tests:**
-    ```powershell
-    # Run the automated test suite
-    .\test_script.ps1
+3.  **Run Tests**:
+    ```bash
+    flutter test
     ```
-
----
-
-## 🧪 Testing & Quality Assurance
-The project includes a comprehensive test suite (Requirement #5):
-- **Unit Tests:** `test/unit_test.dart` (Models & Logic)
-- **Widget Tests:** `test/widget_test.dart` (UI Rendering)
-- **Integration Tests:** `integration_test/app_test.dart` (End-to-End flows)
-
-Run all tests with the provided PowerShell script: `.\test_script.ps1`
-
----
-
-## 📝 Troubleshooting
-- **Permission Errors (TTS/Voice):** Ensure you grant Microphone and "Access list of apps" permissions on MIUI devices.
-- **Build Errors:** If you see `desugaring` errors, ensure your `minSdkVersion` is set to 21 or higher.
-
