@@ -12,11 +12,6 @@ import 'control_panel_screen.dart';
 import 'analytics_screen.dart';
 import 'settings_screen.dart';
 import 'alerts_screen.dart';
-import 'beacon_landing_screen.dart';
-import 'resource_sharing_screen.dart';
-import 'profile_screen.dart';
-import 'beacon_landing_screen.dart';
-import 'resource_sharing_screen.dart';
 import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -320,8 +315,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                           _buildSensorGrid(),
                           const SizedBox(height: 24),
                           _buildQuickActions(),
-                          const SizedBox(height: 24),
-                          _buildBeaconCard(),
                           const SizedBox(height: 24),
                           _buildRecentAlerts(),
                           const SizedBox(height: 100),
