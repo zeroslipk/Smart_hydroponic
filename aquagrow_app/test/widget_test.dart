@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_core_platform_interface/firebase_core_platform_interface.dart';
-import 'package:aquagrow_app/firebase_options.dart';
 import 'package:flutter/services.dart'; 
-import 'package:aquagrow_app/main.dart'; 
 import 'package:provider/provider.dart';
 import 'package:aquagrow_app/providers/sensor_provider.dart';
 import 'package:aquagrow_app/providers/alert_provider.dart';
+import 'package:aquagrow_app/providers/theme_provider.dart';
 import 'package:aquagrow_app/screens/dashboard_screen.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -15,13 +14,11 @@ typedef Callback = void Function(MethodCall call);
 
 // Mock for FirebasePlatform
 class MockFirebasePlatform extends FirebasePlatform {
-  @override
+  // These are required implementations, not overrides
   FirebasePlatform get delegate => this;
 
-  @override
   Map<String, dynamic> get pluginConstants => {};
 
-  @override
   bool get isAutoInitEnabled => true;
 
   @override
@@ -70,13 +67,22 @@ void main() {
     await Firebase.initializeApp();
 
     // Build our app and trigger a frame.
+    // Match the real app structure with all providers including ThemeProvider
     await tester.pumpWidget(
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => SensorProvider()),
           ChangeNotifierProvider(create: (_) => AlertProvider()),
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ],
-        child: MaterialApp(home: const DashboardScreen()),
+        child: Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            return MaterialApp(
+              theme: themeProvider.themeData,
+              home: const DashboardScreen(),
+            );
+          },
+        ),
       ),
     );
 

@@ -48,6 +48,7 @@ class ThemeProvider with ChangeNotifier {
       brightness: Brightness.light,
     ),
     scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+    cardColor: Colors.white,
     fontFamily: 'Roboto',
     useMaterial3: true,
     brightness: Brightness.light,

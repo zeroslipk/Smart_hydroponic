@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:aquagrow_app/main.dart' as app;
@@ -22,10 +23,10 @@ void main() {
       if (loginFinder.evaluate().isNotEmpty || welcomeFinder.evaluate().isNotEmpty) {
         // We are on the login screen.
         // Since we can't automate login without credentials, we fail gracefully.
-        print('----------------------------------------------------');
-        print('TEST INFO: App is on Login Screen.');
-        print('Please log in on the device manually, then run test again.');
-        print('----------------------------------------------------');
+        debugPrint('----------------------------------------------------');
+        debugPrint('TEST INFO: App is on Login Screen.');
+        debugPrint('Please log in on the device manually, then run test again.');
+        debugPrint('----------------------------------------------------');
         // We can either fail or return. Fail makes it clear.
         fail('Device is not logged in. Please log in on the device and retry.');
       }
@@ -49,7 +50,7 @@ void main() {
 
       // Verify Dashboard is loaded (check for Unique Subtitle)
       expect(find.text('HydroPulse System'), findsOneWidget);
-      print('TEST STATUS: Dashboard Loaded');
+      debugPrint('TEST STATUS: Dashboard Loaded');
 
       // Ensure the button is visible (scroll if needed)
       // We loop briefly to ensure it's in the tree before ensuring visibility
@@ -57,20 +58,20 @@ void main() {
       
       await tester.ensureVisible(pumpFinder);
       await tester.pump(); // Cannot use pumpAndSettle due to infinite animations
-      print('TEST STATUS: Pump Switch Found and Visible');
+      debugPrint('TEST STATUS: Pump Switch Found and Visible');
 
       // Tap the Pump button
-      print('TEST STATUS: Tapping Pump Switch...');
+      debugPrint('TEST STATUS: Tapping Pump Switch...');
       await tester.tap(pumpFinder);
       await tester.pump(); // Pump a frame to process the tap
       
       // Wait a bit for any feedback animation (but don't settle infinite ones)
       await Future.delayed(const Duration(milliseconds: 500)); 
-      print('TEST STATUS: Tap Complete');
+      debugPrint('TEST STATUS: Tap Complete');
 
       // Verify we are still running
       expect(find.text('HydroPulse'), findsOneWidget);
-      print('TEST STATUS: Test Finished Successfully!');
+      debugPrint('TEST STATUS: Test Finished Successfully!');
     });
   });
 }

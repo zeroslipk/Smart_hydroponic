@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/sensor_provider.dart';
+import '../services/database_service.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -23,15 +24,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   late AnimationController _pulseController;
 
   final List<String> periods = ['24 Hours', '7 Days', '30 Days', 'Custom'];
-
-  // Store historical data for calculations
-  Map<String, List<double>> sensorHistory = {
-    'temperature': [],
-    'waterLevel': [],
-    'pH': [],
-    'tds': [],
-    'light': [],
-  };
+  final DatabaseService _databaseService = DatabaseService();
+  
+  // Cache for chart data futures to prevent constant rebuilding
+  final Map<String, Future<List<FlSpot>>> _chartDataCache = {};
+  Future<List<TableRow>>? _statsTableCache;
 
   @override
   void initState() {
@@ -45,70 +42,34 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat(reverse: true);
-
-    // Start collecting historical data
-    _startDataCollection();
+  }
+  
+  /// Clear cache when period changes
+  void _clearCache() {
+    _chartDataCache.clear();
+    _statsTableCache = null;
   }
 
-  void _startDataCollection() {
-    // Collect data every 2 seconds for realistic stats
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 2));
-      if (!mounted) return false;
-
-      final provider = context.read<SensorProvider>();
-      
-      // Add current values to history
-      if (provider.temperature != null) {
-        sensorHistory['temperature']!.add(provider.temperature!.value);
-        if (sensorHistory['temperature']!.length > 100) {
-          sensorHistory['temperature']!.removeAt(0);
-        }
-      }
-      
-      if (provider.waterLevel != null) {
-        sensorHistory['waterLevel']!.add(provider.waterLevel!.value);
-        if (sensorHistory['waterLevel']!.length > 100) {
-          sensorHistory['waterLevel']!.removeAt(0);
-        }
-      }
-      
-      if (provider.pH != null) {
-        sensorHistory['pH']!.add(provider.pH!.value);
-        if (sensorHistory['pH']!.length > 100) {
-          sensorHistory['pH']!.removeAt(0);
-        }
-      }
-      
-      if (provider.tds != null) {
-        sensorHistory['tds']!.add(provider.tds!.value);
-        if (sensorHistory['tds']!.length > 100) {
-          sensorHistory['tds']!.removeAt(0);
-        }
-      }
-      
-      if (provider.light != null) {
-        sensorHistory['light']!.add(provider.light!.value);
-        if (sensorHistory['light']!.length > 100) {
-          sensorHistory['light']!.removeAt(0);
-        }
-      }
-
-      return true;
-    });
-  }
-
-  Map<String, double> _getStats(String sensorId) {
-    final history = sensorHistory[sensorId] ?? [];
-    if (history.isEmpty) {
-      return {'min': 0, 'max': 0, 'avg': 0};
+  /// Convert selected period string to hours
+  int _getHoursForPeriod(String period) {
+    switch (period) {
+      case '24 Hours':
+        return 24;
+      case '7 Days':
+        return 7 * 24;
+      case '30 Days':
+        return 30 * 24;
+      case 'Custom':
+        return 24; // Default to 24 hours for custom (can be extended)
+      default:
+        return 24;
     }
+  }
 
-    final min = history.reduce((a, b) => a < b ? a : b);
-    final max = history.reduce((a, b) => a > b ? a : b);
-    final avg = history.reduce((a, b) => a + b) / history.length;
-
-    return {'min': min, 'max': max, 'avg': avg};
+  /// Get statistics from SQLite database
+  Future<Map<String, double>> _getStats(String sensorId) async {
+    final hoursBack = _getHoursForPeriod(selectedPeriod);
+    return await _databaseService.getSensorStats(sensorId, hoursBack);
   }
 
   @override
@@ -140,6 +101,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
+                    setState(() {
+                      _clearCache(); // Clear cache on manual refresh
+                    });
                     await context.read<SensorProvider>().refresh();
                   },
                   color: const Color(0xFF00BCD4),
@@ -250,6 +214,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           _buildGlassIconButton(
             icon: Icons.refresh,
             onTap: () {
+              setState(() {
+                _clearCache(); // Clear cache to force reload
+              });
               context.read<SensorProvider>().refresh();
             },
           ),
@@ -302,9 +269,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             padding: const EdgeInsets.only(right: 12),
             child: GestureDetector(
               onTap: () {
-                setState(() {
-                  selectedPeriod = periods[index];
-                });
+                if (selectedPeriod != periods[index]) {
+                  setState(() {
+                    selectedPeriod = periods[index];
+                    // Clear cache when period changes to reload data
+                    _clearCache();
+                  });
+                }
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -551,42 +522,86 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     required String sensorId,
     required double currentValue,
   }) {
-    final spots = _generateSpotsFromValue(currentValue, sensorId);
+    // Use cached future or create new one
+    final cacheKey = '$sensorId-$selectedPeriod';
+    if (!_chartDataCache.containsKey(cacheKey)) {
+      _chartDataCache[cacheKey] = _generateSpotsFromSQLite(sensorId);
+    }
     
-    // Calculate dynamic min/max from actual chart data
-    final values = spots.map((s) => s.y).toList();
-    final chartMin = values.reduce((a, b) => a < b ? a : b);
-    final chartMax = values.reduce((a, b) => a > b ? a : b);
-    final padding = (chartMax - chartMin) * 0.1; // 10% padding
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
+    return FutureBuilder<List<FlSpot>>(
+      future: _chartDataCache[cacheKey],
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(20),
             ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
             height: 200,
-            child: LineChart(
+            child: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        final spots = snapshot.data ?? [];
+        
+        // Calculate dynamic min/max from actual chart data
+        double chartMin = currentValue;
+        double chartMax = currentValue;
+        if (spots.isNotEmpty) {
+          final values = spots.map((s) => s.y).toList();
+          chartMin = values.reduce((a, b) => a < b ? a : b);
+          chartMax = values.reduce((a, b) => a > b ? a : b);
+          // Include current value in range
+          if (currentValue < chartMin) chartMin = currentValue;
+          if (currentValue > chartMax) chartMax = currentValue;
+        }
+        final padding = (chartMax - chartMin) * 0.1; // 10% padding
+        if (padding == 0) {
+          // If all values are the same, add some padding
+          chartMin -= 1;
+          chartMax += 1;
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 200,
+                child: spots.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No historical data available',
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                          ),
+                        ),
+                      )
+                    : LineChart(
               LineChartData(
                 gridData: FlGridData(
                   show: true,
@@ -686,36 +701,55 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                   ),
                 ],
               ),
-            ),
+                      ),
+                    ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  List<FlSpot> _generateSpotsFromValue(double currentValue, String sensorId) {
-    final history = sensorHistory[sensorId] ?? [];
+  /// Generate chart spots from SQLite historical data
+  Future<List<FlSpot>> _generateSpotsFromSQLite(String sensorId) async {
+    final hoursBack = _getHoursForPeriod(selectedPeriod);
+    final startDate = DateTime.now().subtract(Duration(hours: hoursBack));
     
-    if (history.length < 13) {
-      // Generate simulated data if not enough history
-      final random = math.Random(currentValue.toInt());
-      final variance = currentValue * 0.15;
-      
-      List<FlSpot> spots = [];
-      for (int i = 0; i <= 12; i++) {
-        final variation = (random.nextDouble() - 0.5) * variance;
-        final value = currentValue + variation;
-        spots.add(FlSpot(i.toDouble(), value));
-      }
-      return spots;
-    }
-    
-    // Use actual historical data (last 13 points)
-    final recentHistory = history.sublist(history.length - 13);
-    return List.generate(
-      recentHistory.length,
-      (i) => FlSpot(i.toDouble(), recentHistory[i]),
+    // Get historical data from SQLite (limit to reasonable number for chart)
+    final activities = await _databaseService.getSensorActivities(
+      sensorId: sensorId,
+      startDate: startDate,
+      limit: 100, // Get up to 100 points for smooth chart
     );
+
+    if (activities.isEmpty) {
+      // If no data, return empty spots
+      return [];
+    }
+
+    // Convert to FlSpot format
+    // We need to map timestamps to x-axis positions (0 to 12 for 24h view)
+    // For simplicity, we'll evenly distribute points across the x-axis
+    final spots = <FlSpot>[];
+    final sortedActivities = activities.reversed.toList(); // Oldest first
+    
+    if (sortedActivities.length <= 13) {
+      // If we have 13 or fewer points, use them directly
+      for (int i = 0; i < sortedActivities.length; i++) {
+        spots.add(FlSpot(i.toDouble(), sortedActivities[i].value));
+      }
+    } else {
+      // If we have more points, sample evenly across 13 positions
+      final step = sortedActivities.length / 13;
+      for (int i = 0; i < 13; i++) {
+        final index = (i * step).floor();
+        if (index < sortedActivities.length) {
+          spots.add(FlSpot(i.toDouble(), sortedActivities[index].value));
+        }
+      }
+    }
+
+    return spots;
   }
 
   Widget _buildStatisticsSummary(provider) {
@@ -746,31 +780,53 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               ),
             ],
           ),
-          child: Table(
-            border: TableBorder(
-              horizontalInside: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.2)),
-            ),
-            children: [
-              _buildTableRow('Parameter', 'Min', 'Max', 'Avg', isHeader: true),
-              for (var sensor in sensors)
-                _buildTableRowWithStats(sensor),
-            ],
+          child: FutureBuilder<List<TableRow>>(
+            future: _statsTableCache ??= _buildAllTableRows(sensors),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              final rows = snapshot.data ?? [];
+              return Table(
+                border: TableBorder(
+                  horizontalInside: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.2)),
+                ),
+                children: rows,
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  TableRow _buildTableRowWithStats(dynamic sensor) {
-    final stats = _getStats(sensor.id);
-    final isDecimal = sensor.id == 'pH' || sensor.id == 'temperature';
+  /// Build all table rows including header and sensor stats
+  Future<List<TableRow>> _buildAllTableRows(List<dynamic> sensors) async {
+    final rows = <TableRow>[
+      _buildTableRow('Parameter', 'Min', 'Max', 'Avg', isHeader: true),
+    ];
 
-    return _buildTableRow(
-      sensor.displayName,
-      '${stats['min']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}',
-      '${stats['max']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}',
-      '${stats['avg']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}',
-    );
+    // Load stats for all sensors in parallel
+    final futures = sensors.map((sensor) async {
+      final stats = await _getStats(sensor.id);
+      final isDecimal = sensor.id == 'pH' || sensor.id == 'temperature';
+      
+      return _buildTableRow(
+        sensor.displayName,
+        '${stats['min']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}',
+        '${stats['max']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}',
+        '${stats['avg']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}',
+      );
+    });
+
+    final sensorRows = await Future.wait(futures);
+    rows.addAll(sensorRows);
+
+    return rows;
   }
 
   TableRow _buildTableRow(String col1, String col2, String col3, String col4,
@@ -895,18 +951,49 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     }
     
     try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Generating export...'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+      
       // Build CSV content
       final buffer = StringBuffer();
-      buffer.writeln('Sensor,Value,Unit,Status,Min,Max,Timestamp');
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      buffer.writeln('HydroPulse Sensor Data Export - $selectedPeriod');
+      buffer.writeln('Generated: ${DateTime.now().toString().substring(0, 19)}');
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      buffer.writeln('');
+      
+      // Current sensor readings
+      buffer.writeln('CURRENT SENSOR READINGS');
+      buffer.writeln('Sensor,Value,Unit,Status,Min Range,Max Range,Timestamp');
       
       for (final sensor in sensors) {
         buffer.writeln('${sensor.displayName},${sensor.value},${sensor.unit},${sensor.status},${sensor.min},${sensor.max},${DateTime.now().toIso8601String()}');
       }
       
+      buffer.writeln('');
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      buffer.writeln('STATISTICS SUMMARY ($selectedPeriod)');
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      buffer.writeln('Sensor,Min Value,Max Value,Average Value,Unit');
+      
+      // Add statistics for each sensor
+      for (final sensor in sensors) {
+        final stats = await _getStats(sensor.id);
+        final isDecimal = sensor.id == 'pH' || sensor.id == 'temperature';
+        buffer.writeln('${sensor.displayName},${stats['min']!.toStringAsFixed(isDecimal ? 1 : 0)},${stats['max']!.toStringAsFixed(isDecimal ? 1 : 0)},${stats['avg']!.toStringAsFixed(isDecimal ? 1 : 0)},${sensor.unit}');
+      }
+      
       // Get directory for saving
       final directory = await getApplicationDocumentsDirectory();
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
-      final fileName = 'aquagrow_sensors_$timestamp.csv';
+      final fileName = 'hydropulse_sensors_$timestamp.csv';
       final file = File('${directory.path}/$fileName');
       
       // Write to file
@@ -916,7 +1003,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       // ignore: deprecated_member_use
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: 'AquaGrow Sensor Data Export',
+        text: 'HydroPulse Sensor Data Export',
         subject: 'Sensor Data CSV',
       );
       
@@ -950,10 +1037,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     final sensors = provider.getAllSensors();
     
     try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Generating report...'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+      
       // Build PDF-like report content (formatted text file)
       final buffer = StringBuffer();
       buffer.writeln('═══════════════════════════════════════════════════════════');
-      buffer.writeln('           AQUAGROW SENSOR DATA REPORT');
+      buffer.writeln('           HYDROPULSE SENSOR DATA REPORT');
       buffer.writeln('═══════════════════════════════════════════════════════════');
       buffer.writeln('');
       buffer.writeln('Generated: ${DateTime.now().toString().substring(0, 19)}');
@@ -961,15 +1058,31 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       buffer.writeln('Total Sensors: ${sensors.length}');
       buffer.writeln('');
       buffer.writeln('═══════════════════════════════════════════════════════════');
-      buffer.writeln('SENSOR READINGS');
+      buffer.writeln('CURRENT SENSOR READINGS');
       buffer.writeln('═══════════════════════════════════════════════════════════');
       buffer.writeln('');
       
       for (final sensor in sensors) {
         buffer.writeln(sensor.displayName.toUpperCase());
-        buffer.writeln('  Value: ${sensor.displayValue}${sensor.unit}');
+        buffer.writeln('  Current Value: ${sensor.displayValue}${sensor.unit}');
         buffer.writeln('  Status: ${sensor.status.toUpperCase()}');
-        buffer.writeln('  Range: ${sensor.min} - ${sensor.max}${sensor.unit}');
+        buffer.writeln('  Optimal Range: ${sensor.min} - ${sensor.max}${sensor.unit}');
+        buffer.writeln('');
+      }
+      
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      buffer.writeln('STATISTICS SUMMARY ($selectedPeriod)');
+      buffer.writeln('═══════════════════════════════════════════════════════════');
+      buffer.writeln('');
+      
+      // Add statistics for each sensor
+      for (final sensor in sensors) {
+        final stats = await _getStats(sensor.id);
+        final isDecimal = sensor.id == 'pH' || sensor.id == 'temperature';
+        buffer.writeln(sensor.displayName.toUpperCase());
+        buffer.writeln('  Minimum: ${stats['min']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}');
+        buffer.writeln('  Maximum: ${stats['max']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}');
+        buffer.writeln('  Average: ${stats['avg']!.toStringAsFixed(isDecimal ? 1 : 0)}${sensor.unit}');
         buffer.writeln('');
       }
       
@@ -980,7 +1093,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       // Get directory for saving
       final directory = await getApplicationDocumentsDirectory();
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
-      final fileName = 'aquagrow_report_$timestamp.txt';
+      final fileName = 'hydropulse_report_$timestamp.txt';
       final file = File('${directory.path}/$fileName');
       
       // Write to file
@@ -990,7 +1103,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       // ignore: deprecated_member_use
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: 'AquaGrow Sensor Report',
+        text: 'HydroPulse Sensor Report',
         subject: 'Sensor Data Report',
       );
       

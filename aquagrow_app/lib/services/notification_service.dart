@@ -18,7 +18,7 @@ class NotificationService {
   
   // Notification channel ID for Android
   static const String _channelId = 'aquagrow_alerts';
-  static const String _channelName = 'AquaGrow Alerts';
+  static const String _channelName = 'HydroPulse Alerts';
   static const String _channelDescription = 'Critical sensor alerts and warnings';
 
   /// Initialize notification service
@@ -30,9 +30,12 @@ class NotificationService {
 
     try {
       // Android initialization settings
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      // Note: Icon reference should be without @ symbol for flutter_local_notifications
+      const androidSettings = AndroidInitializationSettings('mipmap/launcher_icon');
       
       // iOS initialization settings
+      // Note: iOS notifications automatically use the app icon from Assets.xcassets/AppIcon.appiconset
+      // No separate icon configuration is needed for iOS
       const iosSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
@@ -207,10 +210,13 @@ class NotificationService {
         importance: importance,
         enableVibration: true,
         playSound: true,
-        icon: '@mipmap/ic_launcher',
+        icon: 'mipmap/launcher_icon', // Without @ symbol for flutter_local_notifications
         styleInformation: BigTextStyleInformation(''),
       );
 
+      // iOS notification details
+      // Note: iOS automatically uses the app icon (from Assets.xcassets/AppIcon.appiconset)
+      // No icon parameter is available - iOS always uses the app icon for notifications
       const iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
@@ -231,6 +237,7 @@ class NotificationService {
       );
 
       debugPrint('NotificationService: Notification shown for alert: ${alert.title} (ID: $notificationId)');
+      debugPrint('NotificationService: Android icon: mipmap/launcher_icon, iOS uses app icon automatically');
     } catch (e) {
       debugPrint('NotificationService: Error showing notification: $e');
       // Don't throw - fail silently to prevent app crash
@@ -260,8 +267,8 @@ class NotificationService {
   /// Handle notification tap (future enhancement)
   void _onNotificationTapped(NotificationResponse response) {
     debugPrint('NotificationService: Notification tapped: ${response.id}');
-    // TODO: Navigate to alerts screen when notification is tapped
-    // This would require accessing Navigator or using a callback
+    // Note: Navigation to alerts screen would require Navigator context
+    // This can be implemented by passing a callback from the main app
   }
 
   /// Check if service is initialized

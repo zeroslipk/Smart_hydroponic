@@ -66,7 +66,8 @@ class AlertProvider with ChangeNotifier {
   final Map<String, DateTime> _lastAlertTime = {};
   // Track if sensor was in alert state (to reset cooldown when back to normal)
   final Map<String, bool> _wasInAlert = {};
-  static const Duration _alertCooldown = Duration(minutes: 1); // Reduced for better UX
+  // Cooldown reduced to 15 seconds for faster notification response while preventing spam
+  static const Duration _alertCooldown = Duration(seconds: 15);
 
   // Getters
   List<AlertModel> get alerts => _alerts;
