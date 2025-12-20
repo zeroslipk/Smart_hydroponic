@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -7,25 +8,35 @@ import 'providers/sensor_provider.dart';
 import 'providers/alert_provider.dart';
 import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
+import 'providers/theme_provider.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  FirebaseDatabase.instance.setPersistenceEnabled(true);
-  FirebaseDatabase.instance.setPersistenceCacheSizeBytes(10000000);
-  
-  // Initialize Notification Service
-  final notificationService = NotificationService();
-  await notificationService.initialize();
-  // Request permissions (but don't block if denied)
-  await notificationService.requestPermissions();
-  
-  runApp(const AquaGrowApp());
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    
+    FirebaseDatabase.instance.setPersistenceEnabled(true);
+    FirebaseDatabase.instance.setPersistenceCacheSizeBytes(10000000);
+    
+    // Initialize Notification Service
+    final notificationService = NotificationService();
+    try {
+      await notificationService.initialize();
+      // Request permissions (but don't block if denied)
+      await notificationService.requestPermissions();
+    } catch (e) {
+      debugPrint("Notification init error: $e");
+    }
+    
+    runApp(const AquaGrowApp());
+  }, (error, stack) {
+    debugPrint("CRITICAL: Uncaught error: $error");
+    debugPrint(stack.toString());
+  });
 }
 
 class AquaGrowApp extends StatefulWidget {
@@ -65,22 +76,17 @@ class _AquaGrowAppState extends State<AquaGrowApp> {
       providers: [
         ChangeNotifierProvider.value(value: _sensorProvider),
         ChangeNotifierProvider.value(value: _alertProvider),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        title: 'AquaGrow - Smart Hydroponic',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primaryColor: const Color(0xFF006064),
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF00BCD4),
-            primary: const Color(0xFF006064),
-            secondary: const Color(0xFF7CB342),
-          ),
-          scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-          fontFamily: 'Roboto',
-          useMaterial3: true,
-        ),
-        home: const SplashScreen(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'AquaGrow - Smart Hydroponic',
+            debugShowCheckedModeBanner: false,
+            theme: themeProvider.themeData,
+            home: const SplashScreen(),
+          );
+        },
       ),
     );
   }
