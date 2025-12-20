@@ -48,10 +48,10 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF006064),
-              Color(0xFFF5F5F5),
+              Theme.of(context).primaryColor,
+              Theme.of(context).scaffoldBackgroundColor,
             ],
-            stops: [0.0, 0.25],
+            stops: const [0.0, 0.25],
           ),
         ),
         child: SafeArea(
@@ -340,7 +340,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -369,7 +369,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -390,7 +390,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -486,7 +486,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                             style: TextStyle(
                               fontSize: 42,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              color: Theme.of(context).textTheme.bodyLarge?.color,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -513,7 +513,9 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                   child: LiquidCircularProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
                     valueColor: AlwaysStoppedAnimation(sensor.color),
-                    backgroundColor: Colors.grey[200]!,
+                    backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.grey[800]! 
+                        : Colors.grey[200]!,
                     borderColor: sensor.color,
                     borderWidth: 3.0,
                     direction: Axis.vertical,
@@ -522,7 +524,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
                   ),
@@ -578,7 +580,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                   ), 
                   sensor.unit
                 ),
-                Container(width: 1, height: 40, color: Colors.grey[300]),
+                Container(width: 1, height: 40, color: Theme.of(context).dividerColor),
                 _buildStatItem(
                   'Avg', 
                   sensor.avg.toStringAsFixed(
@@ -587,7 +589,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                   ), 
                   sensor.unit
                 ),
-                Container(width: 1, height: 40, color: Colors.grey[300]),
+                Container(width: 1, height: 40, color: Theme.of(context).dividerColor),
                 _buildStatItem(
                   'Max', 
                   sensor.max.toStringAsFixed(
@@ -648,7 +650,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
       ],
@@ -699,9 +701,9 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -713,7 +715,7 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -783,9 +785,9 @@ class _SensorMonitoringScreenState extends State<SensorMonitoringScreen>
       isScrollControlled: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: EdgeInsets.only(
             left: 24,

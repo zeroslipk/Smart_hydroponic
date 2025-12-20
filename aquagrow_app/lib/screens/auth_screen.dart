@@ -364,7 +364,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                       colors: [Color(0xFF00BCD4), Color(0xFF7CB342)],
                     ).createShader(bounds),
                     child: Text(
-                      isLogin ? 'Welcome Back' : 'Join AquaGrow',
+                      isLogin ? 'Welcome Back' : 'Join HydroPulse',
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,

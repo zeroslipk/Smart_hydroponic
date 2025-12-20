@@ -146,10 +146,10 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF006064),
-              Color(0xFFF5F5F5),
+              Theme.of(context).primaryColor,
+              Theme.of(context).scaffoldBackgroundColor,
             ],
-            stops: [0.0, 0.25],
+            stops: const [0.0, 0.25],
           ),
         ),
         child: SafeArea(
@@ -257,7 +257,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -291,7 +291,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
             ),
           ),
@@ -309,7 +309,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
         const SizedBox(height: 16),
@@ -326,7 +326,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
   Widget _buildActuatorCard(ActuatorData actuator) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -414,7 +414,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -503,7 +503,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
           Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () {},
+              onTap: () => _showAddScheduleDialog(),
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -543,13 +543,13 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -681,8 +681,8 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: EdgeInsets.only(
@@ -897,13 +897,13 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -1007,7 +1007,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
               type,
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.black87,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1084,9 +1084,14 @@ class _ControlPanelScreenState extends State<ControlPanelScreen>
           child: Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             Navigator.pop(context);
-            // Stop all actuators
+            // Stop all active actuators
+            for (final actuator in actuators) {
+              if (actuator.isActive) {
+                _toggleActuator(actuator);
+              }
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xFFFF5252),

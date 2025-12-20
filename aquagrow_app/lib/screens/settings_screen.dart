@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../providers/alert_provider.dart';
+import '../providers/theme_provider.dart';
 import 'auth_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool criticalOnly = false;
   bool soundEnabled = true;
   bool vibrationEnabled = true;
-  bool darkMode = false;
+  // bool darkMode = false; // Moved to ThemeProvider
 
   double tempMin = 22;
   double tempMax = 28;
@@ -108,12 +109,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF006064), Color(0xFFF5F5F5)],
-            stops: [0.0, 0.25],
+            colors: [
+              Theme.of(context).primaryColor,
+              Theme.of(context).scaffoldBackgroundColor,
+            ],
+            stops: const [0.0, 0.25],
           ),
         ),
         child: SafeArea(
@@ -223,10 +227,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Colors.black87,
+          color: Theme.of(context).textTheme.bodyLarge?.color,
         ),
       ),
     );
@@ -241,7 +245,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -267,7 +271,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Center(
                   child: Text(
                     initials,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -293,10 +297,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 16),
           Text(
             name,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
           const SizedBox(height: 4),
@@ -363,7 +367,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -461,10 +465,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
               ),
             ),
@@ -559,7 +563,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildNotificationSection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -622,7 +626,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSystemSection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -637,11 +641,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildSwitchTile(
             icon: Icons.dark_mode_outlined,
             title: 'Dark Mode',
-            value: darkMode,
+            value: context.watch<ThemeProvider>().isDarkMode,
             onChanged: (value) {
-              setState(() {
-                darkMode = value;
-              });
+              context.read<ThemeProvider>().toggleTheme(value);
             },
           ),
           const Divider(height: 1),
@@ -676,7 +678,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildAboutSection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -697,19 +699,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildActionTile(
             icon: Icons.privacy_tip_outlined,
             title: 'Privacy Policy',
-            color: Colors.black87,
+            color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black87,
           ),
           const Divider(height: 1),
           _buildActionTile(
             icon: Icons.description_outlined,
             title: 'Terms of Service',
-            color: Colors.black87,
+            color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black87,
           ),
           const Divider(height: 1),
           _buildActionTile(
             icon: Icons.help_outline,
             title: 'Help & Support',
-            color: Colors.black87,
+            color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black87,
           ),
         ],
       ),
@@ -738,10 +740,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Colors.black87,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
             ),
           ),
@@ -776,10 +778,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Colors.black87,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
             ),
           ),
@@ -837,7 +839,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildLogoutSection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -887,7 +889,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       margin: const EdgeInsets.only(top: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(

@@ -1,16 +1,57 @@
-# aquagrow_app
+# HydroPulse - Smart Hydroponic System
 
-A new Flutter project.
+## Overview
+**HydroPulse** (formerly AquaGrow) is a comprehensive mobile application for monitoring and controlling smart hydroponic systems. It integrates real-time sensor data, remote actuator control, and intelligent alerts to ensure optimal plant growth.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+### 🖥️ UI & UX
+*   **Modern Dashboard**: Real-time visualization of sensors (pH, Temperature, Water Level).
+*   **Dark Mode**: Fully supported, dynamic dark mode for all screens.
+*   **Liquid Animations**: Custom "blob" and "wave" animations for a premium feel.
+*   **Rebranding**: Fresh "HydroPulse" identity with custom assets.
 
-A few resources to get you started if this is your first Flutter project:
+### 🔥 Mobile Tech
+*   **Firebase Integration**: Real-time database for syncing sensor readings and actuator states.
+*   **Hardware Control**: Toggle Pumps, Lights, and Fans directly from the app.
+*   **Notifications**: Local push notifications for critical alerts (e.g., "Water Level Critical").
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 💾 Data & Logic
+*   **SQLite Database**: Local storage for logs, history, and offline capabilities.
+*   **MVVM Architecture**: Clean separation of UI (Screens) and Logic (ViewModels).
+*   **Validation**: Robust input validation for all forms (Auth, Settings).
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 🤖 Smart Features
+*   **Text-to-Speech (TTS)**: Voice announcements for system status.
+*   **Speech Recognition**: Voice command support (experimental).
+
+## Tech Stack
+*   **Framework**: Flutter (Dart)
+*   **Backend**: Firebase (Auth, Realtime Database)
+*   **Local DB**: SQLite (`sqflite`)
+*   **State Management**: `Provider`
+
+## Testing
+Comprehensive testing suite covering all layers:
+*   **Unit Tests**: Business logic and parsing.
+*   **Widget Tests**: UI rendering and interactions.
+*   **Integration Tests**: Full end-to-end user flows on physical devices.
+
+See [TESTING.md](TESTING.md) for detailed regression test cases.
+
+## Setup & Running
+
+1.  **Install Dependencies**:
+    ```bash
+    flutter pub get
+    ```
+
+2.  **Run Application**:
+    ```bash
+    flutter run
+    ```
+
+3.  **Run Tests**:
+    ```bash
+    flutter test
+    ```

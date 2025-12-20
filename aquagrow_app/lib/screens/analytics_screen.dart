@@ -122,15 +122,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF006064),
-              Color(0xFFF5F5F5),
+              Theme.of(context).primaryColor,
+              Theme.of(context).scaffoldBackgroundColor,
             ],
-            stops: [0.0, 0.25],
+            stops: const [0.0, 0.25],
           ),
         ),
         child: SafeArea(
@@ -315,7 +315,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           colors: [Color(0xFF00BCD4), Color(0xFF00838F)],
                         )
                       : null,
-                  color: isSelected ? null : Colors.white,
+                  color: isSelected ? null : Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: isSelected
                       ? [
@@ -337,7 +337,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                   child: Text(
                     periods[index],
                     style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
+                      color: isSelected ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -389,7 +389,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -401,12 +401,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       ),
       child: Column(
         children: [
-          const Text(
+          Text(
             'Plant Health Score',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
           const SizedBox(height: 24),
@@ -505,12 +505,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Parameter Trends',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
         const SizedBox(height: 16),
@@ -562,7 +562,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -577,10 +577,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
           const SizedBox(height: 20),
@@ -593,7 +593,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (value) {
                     return FlLine(
-                      color: Colors.grey[200]!,
+                      color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
                       strokeWidth: 1,
                     );
                   },
@@ -725,18 +725,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Statistics Summary',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -748,7 +748,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           ),
           child: Table(
             border: TableBorder(
-              horizontalInside: BorderSide(color: Colors.grey[200]!),
+              horizontalInside: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.2)),
             ),
             children: [
               _buildTableRow('Parameter', 'Min', 'Max', 'Avg', isHeader: true),
@@ -778,7 +778,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     final textStyle = TextStyle(
       fontSize: 13,
       fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-      color: isHeader ? Colors.black87 : Colors.black54,
+      color: isHeader ? Theme.of(context).textTheme.bodyLarge?.color : Theme.of(context).textTheme.bodyMedium?.color,
     );
 
     return TableRow(

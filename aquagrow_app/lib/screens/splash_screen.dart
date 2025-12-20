@@ -181,7 +181,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ).createShader(bounds);
                       },
                       child: const Text(
-                        'AquaGrow',
+                        'HydroPulse',
                         style: TextStyle(
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
